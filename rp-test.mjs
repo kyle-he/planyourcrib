@@ -154,6 +154,72 @@ async function press(key, modifiers = []) {
   await sleep(150)
 }
 
+// -------------------------------------------------------- editable zoom amount
+{
+  const beforeZoomState = await state()
+  const beforeZoom = beforeZoomState.viewport
+  const beforeGridStep = beforeZoomState.settings.gridStep
+  const centerWorld = (viewport) => ({
+    x: (viewport.width / 2 - viewport.x) / viewport.scale,
+    y: (viewport.height / 2 - viewport.y) / viewport.scale,
+  })
+  const worldBefore = centerWorld(beforeZoom)
+  const zoomInput = await page.$('[aria-label="Zoom percentage"]')
+  await zoomInput.click({ clickCount: 3 })
+  await page.keyboard.type('150')
+  await page.keyboard.press('Enter')
+  await sleep(120)
+  const afterZoom = (await state()).viewport
+  const worldAfter = centerWorld(afterZoom)
+  const zoomControl = await page.evaluate(() => ({
+    value: document.querySelector('[aria-label="Zoom percentage"]').value,
+    suffix: document.querySelector('.zoom-readout span').textContent,
+  }))
+  check(
+    'zoom percentage is editable with a fixed percent suffix',
+    afterZoom.scale === 3 && zoomControl.value === '150' && zoomControl.suffix === '%',
+    JSON.stringify({ scale: afterZoom.scale, ...zoomControl }),
+  )
+  check(
+    'editing zoom preserves the world point at viewport center',
+    Math.hypot(worldAfter.x - worldBefore.x, worldAfter.y - worldBefore.y) < 1e-6,
+    JSON.stringify({ before: worldBefore, after: worldAfter }),
+  )
+
+  const readGrid = () => page.evaluate(() => ({
+    patterns: [...document.querySelectorAll('.grid-layer pattern')].map((pattern) => ({
+      width: Number(pattern.getAttribute('width')),
+      height: Number(pattern.getAttribute('height')),
+    })),
+    fills: [...document.querySelectorAll('.grid-layer > rect')].map((rect) => rect.getAttribute('fill')),
+  }))
+  await page.evaluate(() => {
+    const store = globalThis.__roomPlannerStore.getState()
+    store.updateSettings({ showGrid: true, gridStep: 6 })
+    store.setZoom(0.5)
+  })
+  await sleep(100)
+  const zoomedOutGrid = await readGrid()
+  await page.evaluate(() => globalThis.__roomPlannerStore.getState().setZoom(16))
+  await sleep(100)
+  const zoomedInGrid = await readGrid()
+  check(
+    'zoom never adds grid subdivisions beyond the selected step',
+    JSON.stringify(zoomedOutGrid) === JSON.stringify(zoomedInGrid) &&
+      zoomedInGrid.patterns.length === 1 &&
+      zoomedInGrid.patterns[0].width === 6 &&
+      zoomedInGrid.patterns[0].height === 6 &&
+      zoomedInGrid.fills.join(',') === 'url(#grid-step)',
+    JSON.stringify({ zoomedOutGrid, zoomedInGrid }),
+  )
+  await page.evaluate(({ scale, gridStep }) => {
+    const store = globalThis.__roomPlannerStore.getState()
+    store.updateSettings({ gridStep })
+    store.setZoom(scale)
+  }, { scale: beforeZoom.scale, gridStep: beforeGridStep })
+  await sleep(100)
+}
+
 // ------------------------------------------------------- connected room walls
 {
   const originalPlan = await plan()

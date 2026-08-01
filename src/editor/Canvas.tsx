@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react'
-import { gridMajorStep } from '@/core/units'
 import { planBounds } from '@/model/derive'
 import { useResolvedSelection, useSettings, useUnit, useViewport } from '@/state/selectors'
 import { useEditorStore } from '@/state/store'
@@ -90,7 +89,6 @@ export function Canvas() {
               <GridLayer
                 viewport={viewport}
                 step={settings.gridStep}
-                major={gridMajorStep(unit, settings.gridStep)}
               />
             )}
             <RoomsLayer />

@@ -992,12 +992,49 @@ body[data-pointer-dragging='true'] .app * {
 }
 
 .zoom-readout {
-  min-width: 46px;
+  position: relative;
+  display: block;
+  width: 52px;
+  height: 28px;
+}
+
+.zoom-readout input {
+  width: 100%;
+  height: 100%;
+  padding: 0 18px 0 4px;
   font-size: 11.5px;
   font-weight: 620;
   color: var(--text-secondary);
-  text-align: center;
+  text-align: right;
   font-variant-numeric: tabular-nums;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  outline: none;
+  cursor: text;
+}
+
+.zoom-readout input:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-subtle);
+}
+
+.zoom-readout input:focus {
+  color: var(--text-primary);
+  background: var(--surface-panel);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.zoom-readout span {
+  position: absolute;
+  top: 50%;
+  right: 7px;
+  color: var(--text-tertiary);
+  font-size: 10.5px;
+  font-weight: 620;
+  pointer-events: none;
+  transform: translateY(-50%);
 }
 
 .tooltip-card {
