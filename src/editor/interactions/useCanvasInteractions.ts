@@ -793,7 +793,11 @@ export function useCanvasInteractions(
           const draft = rectFromPoints(state.origin, snapPoint(worldPoint(event), snapContext()).delta)
           patchPreview({ draftRoom: null })
           if (draft.width >= MIN_ROOM_SIZE && draft.height >= MIN_ROOM_SIZE) {
-            const room = createRoomFromRect(draft, nextRoomName(store.plan.rooms))
+            const room = createRoomFromRect(
+              draft,
+              nextRoomName(store.plan.rooms),
+              store.settings.wallThickness,
+            )
             store.addRoom(room)
             store.setTool('select')
             store.select({ kind: 'room', id: room.id })

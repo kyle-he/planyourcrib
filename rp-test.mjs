@@ -579,6 +579,15 @@ async function press(key, modifiers = []) {
   await clickWorld({ x: room.points[0].x + 60, y: room.points[0].y + 60 })
   const selected = await state()
   check('click on floor selects the room', selected.selection[0]?.id === room.id)
+  const roomFieldLabels = await page.$$eval(
+    '.inspector-popover .field__label',
+    (labels) => labels.map((label) => label.textContent),
+  )
+  check(
+    'wall thickness is no longer editable per room',
+    !roomFieldLabels.includes('Wall thickness'),
+    roomFieldLabels.join(', '),
+  )
 
   // Bottom wall of the starter room is edge 2 (y = max). Push it down 12".
   const bottomMid = {
@@ -668,6 +677,17 @@ async function press(key, modifiers = []) {
 
 // -------------------------------------------------------------- 7. drawing rooms
 {
+  await page.evaluate(() => globalThis.__roomPlannerStore.getState().setWallThickness(7))
+  const globalThickness = await state()
+  check(
+    'the global wall thickness updates every existing room',
+    globalThickness.settings.wallThickness === 7 &&
+      globalThickness.plan.rooms.every((room) => room.wallThickness === 7),
+    JSON.stringify({
+      setting: globalThickness.settings.wallThickness,
+      rooms: globalThickness.plan.rooms.map((room) => room.wallThickness),
+    }),
+  )
   // Zoom out so there is empty canvas to draw in next to the starter room.
   await page.evaluate(() => globalThis.__roomPlannerStore.getState().setZoom(1.2))
   await sleep(150)
@@ -682,9 +702,11 @@ async function press(key, modifiers = []) {
     created && Math.abs(created.points[0].x - 260) < 6 && Math.abs(created.points[2].y - 140) < 6,
     JSON.stringify(created?.points),
   )
+  check('new rooms inherit the global wall thickness', created?.wallThickness === 7)
   check('tool returns to select after drawing', (await state()).tool === 'select')
   await press('Backspace')
   check('Backspace deletes the selection', (await plan()).rooms.length === before)
+  await page.evaluate(() => globalThis.__roomPlannerStore.getState().setWallThickness(5))
 }
 
 // ----------------------------------------------------------- 8. openings on walls
@@ -748,6 +770,10 @@ async function press(key, modifiers = []) {
 
 // ------------------------------------------------------- 10. clipboard + nudge
 {
+  // Keep this shortcut check independent of persisted user preferences.
+  await page.evaluate(() =>
+    globalThis.__roomPlannerStore.getState().updateSettings({ snapToGrid: true, gridStep: 6 }),
+  )
   const sofa = (await plan()).items.find((item) => item.templateId === 'sofa')
   await clickWorld(sofa.center)
   await press('c', ['Meta'])
@@ -806,14 +832,64 @@ async function press(key, modifiers = []) {
 
 // --------------------------------------------------------------- 12. unit switch
 {
+  await page.evaluate(() => {
+    const store = globalThis.__roomPlannerStore.getState()
+    const item = store.plan.items[0]
+    store.select({ kind: 'item', id: item.id })
+    store.updateSettings({ unit: 'cm' })
+  })
+  await sleep(200)
+  const fixedMetricUnits = await page.evaluate(() => {
+    const controls = [...document.querySelectorAll('.inspector-popover .length-field__part')]
+    const rotation = document.querySelector('.inspector-popover .number-field__control')
+    return {
+      count: controls.length,
+      suffixes: controls.map((control) => control.querySelector('span')?.textContent),
+      values: controls.map((control) => control.querySelector('input')?.value),
+      rotationSuffix: rotation?.querySelector('span')?.textContent,
+      rotationValue: rotation?.querySelector('input')?.value,
+    }
+  })
+  check(
+    'metric and degree symbols are fixed suffixes outside editable values',
+    fixedMetricUnits.count === 4 &&
+      fixedMetricUnits.suffixes.every((suffix) => suffix === 'cm') &&
+      fixedMetricUnits.values.every((value) => value && !/[a-z°]/i.test(value)) &&
+      fixedMetricUnits.rotationSuffix === '°' &&
+      fixedMetricUnits.rotationValue !== undefined &&
+      !fixedMetricUnits.rotationValue.includes('°'),
+    JSON.stringify(fixedMetricUnits),
+  )
+
   await page.evaluate(() =>
     globalThis.__roomPlannerStore.getState().updateSettings({ unit: 'm' }),
   )
-  await sleep(200)
+  await sleep(100)
   const label = await page.$eval('.labels-layer', (element) => element.textContent)
   check('areas switch to metric', label?.includes('m²'), label ?? '')
   await page.evaluate(() =>
     globalThis.__roomPlannerStore.getState().updateSettings({ unit: 'ftin' }),
+  )
+  await sleep(100)
+  const imperialControls = await page.evaluate(() => {
+    const groups = [...document.querySelectorAll('.inspector-popover .length-field__parts')]
+    return groups.map((group) => ({
+      values: [...group.querySelectorAll('input')].map((input) => input.value),
+      suffixes: [...group.querySelectorAll('.length-field__part > span')].map(
+        (suffix) => suffix.textContent,
+      ),
+    }))
+  })
+  check(
+    'every feet and inches field uses separate numeric entries with fixed suffixes',
+    imperialControls.length === 4 &&
+      imperialControls.every(
+        (control) =>
+          control.values.length === 2 &&
+          control.values.every((value) => !/[a-z]/i.test(value)) &&
+          control.suffixes.join(',') === 'ft,in',
+      ),
+    JSON.stringify(imperialControls),
   )
 }
 
@@ -1101,6 +1177,16 @@ async function press(key, modifiers = []) {
   await sleep(250)
   await page.$eval('.topbar__settings button', (button) => button.click())
   await sleep(250)
+
+  const settingLabels = await page.$$eval(
+    '.settings-popover .field__label',
+    (labels) => labels.map((label) => label.textContent),
+  )
+  check(
+    'global wall thickness sits directly below grid and snap step',
+    settingLabels.slice(0, 3).join('|') === 'Units|Grid & snap step|Wall thickness',
+    settingLabels.join(', '),
+  )
 
   const layout = await page.evaluate(() => {
     const popover = document.querySelector('.settings-popover')

@@ -24,7 +24,11 @@ export function nextRoomName(existing: readonly Room[]): string {
   return fresh ?? `Room ${existing.length + 1}`
 }
 
-export function createRoomFromRect(rect: Rect, name: string): Room {
+export function createRoomFromRect(
+  rect: Rect,
+  name: string,
+  wallThickness = DEFAULT_WALL_THICKNESS,
+): Room {
   return {
     id: createId('room'),
     name,
@@ -34,7 +38,7 @@ export function createRoomFromRect(rect: Rect, name: string): Room {
       { x: rect.x + rect.width, y: rect.y + rect.height },
       { x: rect.x, y: rect.y + rect.height },
     ],
-    wallThickness: DEFAULT_WALL_THICKNESS,
+    wallThickness,
     floor: DEFAULT_FLOOR,
   }
 }
@@ -81,6 +85,7 @@ export function createOpening(
 export const DEFAULT_SETTINGS: Settings = {
   unit: 'ftin',
   gridStep: defaultGridStep('ftin'),
+  wallThickness: DEFAULT_WALL_THICKNESS,
   showGrid: true,
   snapToGrid: true,
   snapToObjects: true,

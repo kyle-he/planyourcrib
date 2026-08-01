@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import { clamp } from '@/core/geometry'
-import { formatLength, parseLength, type UnitSystem } from '@/core/units'
+import { cmFromInches, parseLength, UNIT_SHORT, type UnitSystem } from '@/core/units'
 
 export interface LengthFieldProps {
   label?: string
@@ -39,7 +39,7 @@ export function LengthField({
   const inputRef = useRef<HTMLInputElement>(null)
   const feetRef = useRef<HTMLInputElement>(null)
   const inchesRef = useRef<HTMLInputElement>(null)
-  const formatted = formatLength(value, unit)
+  const formatted = formatUnitValue(value, unit)
   const wholeFeet = Math.floor(Math.max(0, value) / 12)
   const remainingInches = Math.max(0, value) - wholeFeet * 12
 
@@ -237,31 +237,40 @@ export function LengthField({
   return (
     <div className="field">
       {labelElement}
-      <input
-        ref={inputRef}
-        className={`input input--numeric${invalid ? ' is-invalid' : ''}`}
-        value={draft ?? formatted}
-        disabled={disabled}
-        inputMode="text"
-        spellCheck={false}
-        aria-label={label}
-        onChange={(event) => {
-          setDraft(event.target.value)
-          setInvalid(false)
-        }}
-        onFocus={(event) => event.currentTarget.select()}
-        onBlur={() => {
-          if (!commitDraft()) {
-            setDraft(null)
+      <label className={`length-field__part${invalid ? ' is-invalid' : ''}`}>
+        <input
+          ref={inputRef}
+          className="input input--numeric"
+          value={draft ?? formatted}
+          disabled={disabled}
+          inputMode="decimal"
+          spellCheck={false}
+          aria-label={label}
+          onChange={(event) => {
+            setDraft(event.target.value)
             setInvalid(false)
-          }
-        }}
-        onKeyDown={handleKeyDown}
-      />
+          }}
+          onFocus={(event) => event.currentTarget.select()}
+          onBlur={() => {
+            if (!commitDraft()) {
+              setDraft(null)
+              setInvalid(false)
+            }
+          }}
+          onKeyDown={handleKeyDown}
+        />
+        <span>{UNIT_SHORT[unit]}</span>
+      </label>
     </div>
   )
 }
 
 function formatDecimal(value: number): string {
   return value.toFixed(2).replace(/\.?0+$/, '')
+}
+
+function formatUnitValue(value: number, unit: UnitSystem): string {
+  if (unit === 'cm') return formatDecimal(cmFromInches(value))
+  if (unit === 'm') return (cmFromInches(value) / 100).toFixed(3).replace(/\.?0+$/, '')
+  return formatDecimal(value)
 }

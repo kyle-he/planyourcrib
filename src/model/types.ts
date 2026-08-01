@@ -71,6 +71,8 @@ export interface Plan {
 export interface Settings {
   unit: UnitSystem
   gridStep: number
+  /** Document-wide wall thickness in inches. */
+  wallThickness: number
   showGrid: boolean
   snapToGrid: boolean
   snapToObjects: boolean

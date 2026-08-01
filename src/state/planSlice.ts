@@ -3,7 +3,7 @@ import type { StateCreator } from 'zustand'
 import { add, clamp, dot, normalize, scale, sub } from '@/core/geometry'
 import { createId } from '@/core/id'
 import { maxOpeningOffset, roomEdge } from '@/model/derive'
-import { createStarterPlan, nextRoomName } from '@/model/factory'
+import { DEFAULT_WALL_THICKNESS, createStarterPlan, nextRoomName } from '@/model/factory'
 import type { Item, Opening, Plan, Room, SelectionRef } from '@/model/types'
 import type { EditorStore, PlanSlice } from './types'
 
@@ -74,7 +74,21 @@ export const createPlanSlice: StateCreator<EditorStore, [], [], PlanSlice> = (se
     },
 
     loadPlan: (plan) => {
-      set({ plan, past: [], future: [], selection: [], editingRoomId: null })
+      const state = get()
+      const wallThickness = plan.rooms[0]?.wallThickness ??
+        state.settings.wallThickness ?? DEFAULT_WALL_THICKNESS
+      const normalizedPlan = {
+        ...plan,
+        rooms: plan.rooms.map((room) => ({ ...room, wallThickness })),
+      }
+      set({
+        plan: normalizedPlan,
+        settings: { ...state.settings, wallThickness },
+        past: [],
+        future: [],
+        selection: [],
+        editingRoomId: null,
+      })
     },
     newPlan: () => {
       get().loadPlan({ version: 1, name: 'Untitled plan', rooms: [], openings: [], items: [] })

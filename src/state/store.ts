@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
+import { DEFAULT_WALL_THICKNESS } from '@/model/factory'
 import { createClipboardSlice } from './clipboardSlice'
 import { createPlanSlice } from './planSlice'
 import { createSelectionSlice } from './selectionSlice'
@@ -27,6 +28,23 @@ export const useEditorStore = create<EditorStore>()(
       // Only the document and preferences survive a reload; transient editor
       // state (selection, tool, history, viewport) always starts fresh.
       partialize: (state) => ({ plan: state.plan, settings: state.settings }),
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<Pick<EditorStore, 'plan' | 'settings'>>
+        const wallThickness = persisted.settings?.wallThickness ??
+          persisted.plan?.rooms[0]?.wallThickness ?? DEFAULT_WALL_THICKNESS
+        const plan = persisted.plan
+          ? {
+              ...persisted.plan,
+              rooms: persisted.plan.rooms.map((room) => ({ ...room, wallThickness })),
+            }
+          : currentState.plan
+        return {
+          ...currentState,
+          ...persisted,
+          plan,
+          settings: { ...currentState.settings, ...persisted.settings, wallThickness },
+        }
+      },
     },
   ),
 )

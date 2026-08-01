@@ -1,9 +1,10 @@
 import type { StateCreator } from 'zustand'
+import { clamp } from '@/core/geometry'
 import { defaultGridStep } from '@/core/units'
 import { DEFAULT_SETTINGS } from '@/model/factory'
 import type { EditorStore, SettingsSlice } from './types'
 
-export const createSettingsSlice: StateCreator<EditorStore, [], [], SettingsSlice> = (set) => ({
+export const createSettingsSlice: StateCreator<EditorStore, [], [], SettingsSlice> = (set, get) => ({
   settings: DEFAULT_SETTINGS,
 
   updateSettings: (patch) =>
@@ -15,4 +16,12 @@ export const createSettingsSlice: StateCreator<EditorStore, [], [], SettingsSlic
       }
       return { settings }
     }),
+
+  setWallThickness: (wallThickness) => {
+    const next = clamp(wallThickness, 1, 24)
+    get().commit((plan) => {
+      for (const room of plan.rooms) room.wallThickness = next
+    })
+    set((state) => ({ settings: { ...state.settings, wallThickness: next } }))
+  },
 })

@@ -67,16 +67,6 @@ export function RoomInspector({ room }: { room: Room }) {
         </p>
       )}
 
-      <LengthField
-        label="Wall thickness"
-        value={room.wallThickness}
-        unit={unit}
-        min={1}
-        max={24}
-        onChange={(wallThickness) => updateRoom(room.id, { wallThickness })}
-        {...scrub}
-      />
-
       <Field label="Floor">
         <Swatches
           value={room.floor}

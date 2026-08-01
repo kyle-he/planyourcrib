@@ -607,6 +607,10 @@ body[data-pointer-dragging='true'] .app * {
 
 .input--numeric {
   text-align: right;
+  cursor: text;
+}
+
+.input--scrubbable {
   cursor: ew-resize;
 }
 
@@ -621,11 +625,13 @@ body[data-pointer-dragging='true'] .app * {
   min-width: 0;
 }
 
-.length-field__part .input {
+.length-field__part .input,
+.number-field__control .input {
   padding-right: 25px;
 }
 
-.length-field__part > span {
+.length-field__part > span,
+.number-field__control > span {
   position: absolute;
   top: 50%;
   right: 8px;
@@ -636,7 +642,13 @@ body[data-pointer-dragging='true'] .app * {
   transform: translateY(-50%);
 }
 
-.length-field__parts.is-invalid .input {
+.number-field__control {
+  position: relative;
+  display: block;
+}
+
+.length-field__parts.is-invalid .input,
+.length-field__part.is-invalid .input {
   border-color: var(--danger);
 }
 

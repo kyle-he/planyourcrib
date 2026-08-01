@@ -85,10 +85,12 @@ export function ItemInspector({ item }: { item: Item }) {
           value={item.rotation}
           suffix="°"
           step={15}
+          scrubbable
           min={-360}
           max={360}
           disabled={item.locked}
           onChange={(rotation) => updateItem(item.id, { rotation: ((rotation % 360) + 360) % 360 })}
+          {...scrub}
         />
         <Button
           icon="rotate"

@@ -15,6 +15,9 @@ export function DisplaySettings() {
   const settings = useSettings()
   const unit = useUnit()
   const updateSettings = useEditorStore((state) => state.updateSettings)
+  const setWallThickness = useEditorStore((state) => state.setWallThickness)
+  const beginBatch = useEditorStore((state) => state.beginBatch)
+  const endBatch = useEditorStore((state) => state.endBatch)
 
   return (
     <div className="stack">
@@ -33,6 +36,17 @@ export function DisplaySettings() {
         min={0.25}
         max={120}
         onChange={(gridStep) => updateSettings({ gridStep })}
+      />
+
+      <LengthField
+        label="Wall thickness"
+        value={settings.wallThickness}
+        unit={unit}
+        min={1}
+        max={24}
+        onChange={setWallThickness}
+        onScrubStart={beginBatch}
+        onScrubEnd={endBatch}
       />
 
       <div>

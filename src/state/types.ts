@@ -107,6 +107,7 @@ export interface ViewportSlice {
 export interface SettingsSlice {
   settings: Settings
   updateSettings: (patch: Partial<Settings>) => void
+  setWallThickness: (wallThickness: number) => void
 }
 
 export interface ClipboardSlice {
