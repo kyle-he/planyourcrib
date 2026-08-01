@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "review:items": "VITE_ENABLE_ITEM_WORKSHOP=true vite --open '/?item-workshop'",
     "build": "tsc -b && vite build",
     "check:api": "node scripts/check-plan-api.mjs",
     "lint": "oxlint",

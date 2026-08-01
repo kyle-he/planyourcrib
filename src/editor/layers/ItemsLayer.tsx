@@ -82,7 +82,7 @@ function ItemShape({ item }: { item: Item }) {
               strokeDasharray={item.imageId ? '4 3' : undefined}
             />
           )}
-          <g color={outline} opacity={0.85}>
+          <g color={outline}>
             <Glyph w={item.width} h={item.depth} fill={item.color} outlineWidth={strokeWidth} />
           </g>
         </>

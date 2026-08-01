@@ -11,10 +11,12 @@ export type GlyphKey =
   | 'stool'
   | 'tableRect'
   | 'tableRound'
+  | 'sideTable'
   | 'desk'
   | 'deskL'
   | 'nightstand'
   | 'dresser'
+  | 'tvStand'
   | 'wardrobe'
   | 'bookcase'
   | 'tv'
@@ -99,8 +101,8 @@ const RAW_ITEMS: readonly ItemTemplate[] = [
   { id: 'sectional', name: 'Sectional', category: 'living', width: 102, depth: 66, glyph: 'sectional' },
   { id: 'armchair', name: 'Armchair', category: 'living', width: 34, depth: 34, glyph: 'armchair' },
   { id: 'coffee-table', name: 'Coffee table', category: 'living', width: 48, depth: 24, glyph: 'tableRect' },
-  { id: 'side-table', name: 'Side table', category: 'living', width: 22, depth: 22, glyph: 'tableRound' },
-  { id: 'tv-stand', name: 'TV stand', category: 'living', width: 60, depth: 18, glyph: 'dresser', wallMounted: true },
+  { id: 'side-table', name: 'Side table', category: 'living', width: 22, depth: 22, glyph: 'sideTable' },
+  { id: 'tv-stand', name: 'TV stand', category: 'living', width: 60, depth: 18, glyph: 'tvStand', wallMounted: true },
   { id: 'tv', name: 'TV', category: 'living', width: 52, depth: 4, glyph: 'tv', wallMounted: true },
   { id: 'bookcase', name: 'Bookcase', category: 'living', width: 36, depth: 12, glyph: 'bookcase', wallMounted: true },
   { id: 'floor-lamp', name: 'Floor lamp', category: 'living', width: 16, depth: 16, glyph: 'lamp' },
