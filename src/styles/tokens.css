@@ -1,0 +1,64 @@
+:root {
+  /* Surfaces */
+  --surface-app: #f1f3f7;
+  --surface-panel: #ffffff;
+  --surface-sunken: #f6f7fa;
+  --surface-raised: #ffffff;
+  --surface-hover: #f0f2f6;
+  --surface-active: #e7ebf3;
+  --surface-canvas: #eceef3;
+  --surface-paper: #ffffff;
+
+  /* Lines */
+  --border-subtle: #e6e8ee;
+  --border-default: #d8dbe3;
+  --border-strong: #b9bec9;
+
+  /* Text */
+  --text-primary: #16181d;
+  --text-secondary: #5a6172;
+  --text-tertiary: #8b91a1;
+  --text-inverse: #ffffff;
+
+  /* Accent */
+  --accent: #2f6df6;
+  --accent-hover: #245fe0;
+  --accent-soft: #e8efff;
+  --accent-border: #b9cdfd;
+  --danger: #dc3b48;
+  --danger-soft: #fdecee;
+  --warning: #d98324;
+  --success: #1f9d63;
+
+  /* Plan drawing */
+  --wall-fill: #2a2f3a;
+  --wall-stroke: #171a21;
+  --grid-minor: #dfe3ec;
+  --grid-major: #cbd1de;
+  --dimension: #7b8296;
+  --dimension-strong: #4a5163;
+  --snap-guide: #f0499b;
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 7px;
+  --radius-lg: 11px;
+  --radius-full: 999px;
+
+  /* Elevation */
+  --shadow-sm: 0 1px 2px rgb(16 20 32 / 6%), 0 1px 1px rgb(16 20 32 / 4%);
+  --shadow-md: 0 4px 12px rgb(16 20 32 / 8%), 0 1px 3px rgb(16 20 32 / 6%);
+  --shadow-lg: 0 12px 32px rgb(16 20 32 / 12%), 0 2px 8px rgb(16 20 32 / 6%);
+
+  /* Metrics */
+  --topbar-height: 52px;
+  --statusbar-height: 30px;
+  --panel-width: 268px;
+  --inspector-width: 288px;
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace;
+
+  --duration-fast: 110ms;
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+}

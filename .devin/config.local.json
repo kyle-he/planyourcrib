@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Exec(node)",
+      "Exec(npm create)",
+      "Exec(npx)",
+      "Exec(mv)",
+      "Exec(npm pkg)",
+      "Exec(ls src)",
+      "Exec(rm)"
+    ]
+  }
+}
