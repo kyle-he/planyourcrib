@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Canvas } from '@/editor/Canvas'
 import { useKeyboardShortcuts } from '@/editor/interactions/useKeyboardShortcuts'
+import { AboutModal } from '@/ui/AboutModal'
 import { CatalogPanel } from '@/ui/CatalogPanel'
 import { Inspector } from '@/ui/inspector/Inspector'
 import { ShortcutsModal } from '@/ui/ShortcutsModal'
@@ -11,9 +12,10 @@ import { ViewportControls } from '@/ui/ViewportControls'
 import { Icon } from '@/ui/components/Icon'
 
 export function App() {
+  const [showAbout, setShowAbout] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
   const shouldAutoCollapseSidebar = useMediaQuery('(max-width: 1024px)')
-  const isMobile = useMediaQuery('(max-width: 768px)')
+  const isMobile = useMediaQuery('(max-width: 640px)')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(shouldAutoCollapseSidebar)
   const [mobileNoticeDismissed, setMobileNoticeDismissed] = useState(false)
   const toggleShortcuts = useCallback(() => setShowShortcuts((open) => !open), [])
@@ -27,7 +29,7 @@ export function App() {
 
   return (
     <div className="app">
-      <Topbar onShowShortcuts={toggleShortcuts} />
+      <Topbar onShowAbout={() => setShowAbout(true)} onShowShortcuts={toggleShortcuts} />
       <div className="app__body">
         {!sidebarCollapsed && <CatalogPanel onCollapse={() => setSidebarCollapsed(true)} />}
         <div className={`app__center${sidebarCollapsed ? '' : ' app__center--sidebar-open'}`}>
@@ -57,6 +59,7 @@ export function App() {
         </div>
       </div>
       <StatusBar />
+      {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
       {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} />}
       {isMobile && !mobileNoticeDismissed && (
         <div className="mobile-notice-backdrop" role="presentation">

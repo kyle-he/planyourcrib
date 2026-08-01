@@ -7,10 +7,11 @@ import { Button, IconButton } from './components/Button'
 import { SettingsMenu } from './SettingsMenu'
 
 export interface TopbarProps {
+  onShowAbout: () => void
   onShowShortcuts: () => void
 }
 
-export function Topbar({ onShowShortcuts }: TopbarProps) {
+export function Topbar({ onShowAbout, onShowShortcuts }: TopbarProps) {
   const [showSettings, setShowSettings] = useState(false)
   const closeSettings = useCallback(() => setShowSettings(false), [])
   const undo = useEditorStore((state) => state.undo)
@@ -35,7 +36,14 @@ export function Topbar({ onShowShortcuts }: TopbarProps) {
     <header className="topbar">
       <div className="topbar__brand">
         <img className="topbar__logo" src="/nerd.webp" alt="" />
-        Plan Your Crib
+        <span>Plan Your Crib</span>
+        <IconButton
+          className="topbar__about"
+          icon="info"
+          label="About Plan Your Crib"
+          variant="ghost"
+          onClick={onShowAbout}
+        />
       </div>
       <div className="topbar__spacer" />
       <IconButton

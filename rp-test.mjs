@@ -1084,6 +1084,20 @@ async function press(key, modifiers = []) {
 
 // -------------------------------------------------------- mobile experience notice
 {
+  await page.setViewport({ width: 700, height: 844, deviceScaleFactor: 1 })
+  await sleep(250)
+  const compactDesktop = await page.evaluate(() => ({
+    noticeVisible: Boolean(document.querySelector('.mobile-notice')),
+    brandVisible: getComputedStyle(document.querySelector('.topbar__brand')).display !== 'none',
+    zoomInputVisible:
+      document.querySelector('[aria-label="Zoom percentage"]').getBoundingClientRect().width > 0,
+  }))
+  check(
+    'compact desktop width does not trigger mobile mode',
+    !compactDesktop.noticeVisible && compactDesktop.brandVisible && compactDesktop.zoomInputVisible,
+    JSON.stringify(compactDesktop),
+  )
+
   await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 })
   await sleep(250)
   const notice = await page.evaluate(() => {
@@ -1202,6 +1216,54 @@ async function press(key, modifiers = []) {
 
 // ------------------------------------------------------------- 14. no overflow
 {
+  await page.click('[aria-label="About Plan Your Crib"]')
+  await sleep(100)
+  const about = await page.evaluate(() => {
+    const dialog = document.querySelector('[role="dialog"][aria-label="About Plan Your Crib"]')
+    const sourceLink = dialog?.querySelector('.about-modal__source')
+    const apiLink = dialog?.querySelector('.about-modal__api')
+    const credit = dialog?.querySelector('.about-modal__credit')
+    const creatorLink = credit?.querySelector('a')
+    return {
+      hasHeader: Boolean(dialog?.querySelector('.modal__header')),
+      hasCloseButton: Boolean(dialog?.querySelector('.modal__close')),
+      name: dialog?.querySelector('.about-modal__name')?.textContent.trim(),
+      credit: credit?.textContent.replace(/\s+/g, ' ').trim(),
+      creditAfterActions:
+        Boolean(credit) && Boolean(dialog?.querySelector('.about-modal__actions')?.compareDocumentPosition(credit) & Node.DOCUMENT_POSITION_FOLLOWING),
+      creatorHref: creatorLink?.href,
+      sourceHref: sourceLink?.href,
+      sourceText: sourceLink?.textContent.trim(),
+      sourceHasIcon: Boolean(sourceLink?.querySelector('svg')),
+      apiText: apiLink?.textContent.trim(),
+      apiHref: apiLink?.href,
+      apiHasIcon: Boolean(apiLink?.querySelector('svg')),
+    }
+  })
+  check(
+    'the headerless About popup includes creator, source, and API links',
+    !about.hasHeader &&
+      about.hasCloseButton &&
+      about.name === 'Plan Your Crib' &&
+      about.credit === 'Made with ❤️ by Kyle He' &&
+      about.creditAfterActions &&
+      about.creatorHref === 'https://kylehe.com/' &&
+      about.sourceHref === 'https://github.com/kyle-he/planyourcrib' &&
+      about.sourceText === 'View source on GitHub' &&
+      !about.sourceHasIcon &&
+      about.apiText === 'Machine-readable API' &&
+      about.apiHref ===
+        'https://github.com/kyle-he/planyourcrib/blob/main/docs/PLAN_JSON_API.md' &&
+      !about.apiHasIcon,
+    JSON.stringify(about),
+  )
+  await page.keyboard.press('Escape')
+  await sleep(100)
+  check(
+    'Escape closes the About popup',
+    !(await page.$('[role="dialog"][aria-label="About Plan Your Crib"]')),
+  )
+
   for (const width of [1512, 1180, 1024]) {
     await page.setViewport({ width, height: 900, deviceScaleFactor: 1 })
     await sleep(250)
