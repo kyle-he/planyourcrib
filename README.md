@@ -1,32 +1,23 @@
-# React + TypeScript + Vite
+# Plan Your Crib
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A browser-based 2D room planner built with React, TypeScript, Zustand, and Vite.
 
-Currently, two official plugins are available:
+## Development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Use `npm run build` for a production build, `npm run lint` for static checks, and `npm run check:api` to verify the public schema, catalog, and example remain synchronized with the editor.
+
+## Plan JSON API
+
+Plans can be imported as `.json` files or exported as ZIP archives containing `plan.json` and optional image assets. See the [Plan JSON API](docs/PLAN_JSON_API.md) for the format, geometry rules, AI-generation prompt, JSON Schema, catalog, and complete example.
+
+Machine-readable resources live in [`public/api`](public/api):
+
+- [`plan.schema.json`](public/api/plan.schema.json)
+- [`item-catalog.json`](public/api/item-catalog.json)
+- [`example-plan.json`](public/api/example-plan.json)
+- [`index.json`](public/api/index.json)

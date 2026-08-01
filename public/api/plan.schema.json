@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "/api/plan.schema.json",
+  "title": "Plan Your Crib plan document",
+  "description": "Version 1 interchange format. All coordinates and lengths are inches; +x points right and +y points down.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "name", "rooms", "walls", "openings", "items"],
+  "properties": {
+    "version": {
+      "const": 1,
+      "description": "Document format version."
+    },
+    "name": {
+      "type": "string",
+      "description": "User-visible plan name."
+    },
+    "rooms": {
+      "type": "array",
+      "description": "Closed interior floor polygons. Perimeter walls are derived automatically.",
+      "items": { "$ref": "#/$defs/room" }
+    },
+    "walls": {
+      "type": "array",
+      "description": "Optional freestanding wall centerlines. Do not duplicate room perimeter walls here.",
+      "items": { "$ref": "#/$defs/wall" }
+    },
+    "openings": {
+      "type": "array",
+      "description": "Doors, windows, and archways hosted on room perimeter edges.",
+      "items": { "$ref": "#/$defs/opening" }
+    },
+    "items": {
+      "type": "array",
+      "description": "Furniture, appliances, fixtures, and user images.",
+      "items": { "$ref": "#/$defs/item" }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]*$",
+      "description": "Stable identifier. Prefer room_, wall_, open_, or item_ prefixes and keep every id unique."
+    },
+    "positiveLength": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "A length in inches."
+    },
+    "color": {
+      "type": "string",
+      "pattern": "^#[0-9A-Fa-f]{6}$",
+      "description": "Six-digit CSS hex color."
+    },
+    "vec2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "number", "description": "Horizontal position in inches; increases rightward." },
+        "y": { "type": "number", "description": "Vertical position in inches; increases downward." }
+      }
+    },
+    "room": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "points", "wallThickness", "floor"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "type": "string", "description": "Room label shown at the polygon centroid." },
+        "points": {
+          "type": "array",
+          "minItems": 3,
+          "uniqueItems": true,
+          "description": "Interior corners in ring order. Do not repeat the first point. Prefer positive shoelace order: for an axis-aligned rectangle, top-left, top-right, bottom-right, bottom-left.",
+          "items": { "$ref": "#/$defs/vec2" }
+        },
+        "wallThickness": {
+          "allOf": [{ "$ref": "#/$defs/positiveLength" }],
+          "description": "Perimeter wall thickness in inches; normally 4."
+        },
+        "floor": { "$ref": "#/$defs/color" }
+      }
+    },
+    "wall": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "a", "b", "thickness"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "a": {
+          "allOf": [{ "$ref": "#/$defs/vec2" }],
+          "description": "First endpoint of the wall centerline."
+        },
+        "b": {
+          "allOf": [{ "$ref": "#/$defs/vec2" }],
+          "description": "Second endpoint of the wall centerline; must differ from a."
+        },
+        "thickness": { "$ref": "#/$defs/positiveLength" }
+      }
+    },
+    "opening": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "roomId", "edgeIndex", "offset", "width", "flipHinge", "flipInward"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": {
+          "enum": ["door", "double-door", "sliding-door", "pocket-door", "archway", "window", "bay-window"]
+        },
+        "roomId": {
+          "allOf": [{ "$ref": "#/$defs/id" }],
+          "description": "id of the host room."
+        },
+        "edgeIndex": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Index i of the host edge points[i] -> points[(i + 1) mod points.length]."
+        },
+        "offset": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Distance from the host edge start to the opening center, in inches. Must be between width/2 and edgeLength-width/2."
+        },
+        "width": { "$ref": "#/$defs/positiveLength" },
+        "flipHinge": {
+          "type": "boolean",
+          "description": "For hinged doors, moves the hinge to the far end of the opening. Ignored by non-hinged kinds."
+        },
+        "flipInward": {
+          "type": "boolean",
+          "description": "For hinged doors, true swings into the host room. Ignored by non-hinged kinds."
+        }
+      }
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "templateId", "name", "center", "width", "depth", "rotation", "color", "locked"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "templateId": {
+          "enum": [
+            "sofa", "loveseat", "sectional", "armchair", "coffee-table", "side-table", "tv-stand", "tv", "bookcase", "floor-lamp", "plant", "rug", "piano",
+            "bed-twin", "bed-twin-xl", "bed-full", "bed-queen", "bed-king", "bed-california-king", "nightstand", "dresser", "wardrobe", "crib",
+            "fridge", "fridge-single", "range", "wall-oven", "dishwasher", "kitchen-sink", "counter", "island", "microwave", "pantry",
+            "dining-table", "dining-round", "dining-chair", "bar-stool", "buffet",
+            "toilet", "bathtub", "shower", "vanity", "vanity-double", "pedestal-sink",
+            "desk", "desk-l", "office-chair", "filing-cabinet",
+            "washer", "dryer", "laundry-sink", "water-heater",
+            "stairs", "fireplace", "radiator", "column", "closet", "image"
+          ],
+          "description": "Visual template from /api/item-catalog.json. Use image only when a matching imageId asset is bundled in the ZIP."
+        },
+        "name": { "type": "string", "description": "User-visible item label; it may differ from the template name." },
+        "center": { "$ref": "#/$defs/vec2" },
+        "width": { "$ref": "#/$defs/positiveLength" },
+        "depth": { "$ref": "#/$defs/positiveLength" },
+        "rotation": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 360,
+          "description": "Clockwise degrees on screen. Normalize to the range [0, 360)."
+        },
+        "color": { "$ref": "#/$defs/color" },
+        "locked": { "type": "boolean", "description": "When true, interactive move, resize, and rotate actions are disabled." },
+        "imageId": {
+          "allOf": [{ "$ref": "#/$defs/id" }],
+          "description": "Asset id for templateId=image. The ZIP must contain images/<imageId>.<ext>."
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "templateId": { "const": "image" } }, "required": ["templateId"] },
+          "then": { "required": ["imageId"] }
+        }
+      ]
+    }
+  }
+}

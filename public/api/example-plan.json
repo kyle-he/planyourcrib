@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "name": "Bedroom and Hall",
+  "rooms": [
+    {
+      "id": "room_bedroom",
+      "name": "Bedroom",
+      "points": [
+        { "x": 0, "y": 0 },
+        { "x": 144, "y": 0 },
+        { "x": 144, "y": 120 },
+        { "x": 0, "y": 120 }
+      ],
+      "wallThickness": 4,
+      "floor": "#f8f5f0"
+    },
+    {
+      "id": "room_hall",
+      "name": "Hall",
+      "points": [
+        { "x": 148, "y": 0 },
+        { "x": 196, "y": 0 },
+        { "x": 196, "y": 120 },
+        { "x": 148, "y": 120 }
+      ],
+      "wallThickness": 4,
+      "floor": "#eff2f5"
+    }
+  ],
+  "walls": [],
+  "openings": [
+    {
+      "id": "open_bedroom_door",
+      "kind": "door",
+      "roomId": "room_bedroom",
+      "edgeIndex": 1,
+      "offset": 60,
+      "width": 32,
+      "flipHinge": false,
+      "flipInward": true
+    },
+    {
+      "id": "open_bedroom_window",
+      "kind": "window",
+      "roomId": "room_bedroom",
+      "edgeIndex": 0,
+      "offset": 72,
+      "width": 48,
+      "flipHinge": false,
+      "flipInward": false
+    }
+  ],
+  "items": [
+    {
+      "id": "item_queen_bed",
+      "templateId": "bed-queen",
+      "name": "Queen bed",
+      "center": { "x": 72, "y": 40 },
+      "width": 60,
+      "depth": 80,
+      "rotation": 0,
+      "color": "#ece8f6",
+      "locked": false
+    },
+    {
+      "id": "item_nightstand",
+      "templateId": "nightstand",
+      "name": "Nightstand",
+      "center": { "x": 116, "y": 22 },
+      "width": 20,
+      "depth": 18,
+      "rotation": 0,
+      "color": "#ece8f6",
+      "locked": false
+    }
+  ]
+}

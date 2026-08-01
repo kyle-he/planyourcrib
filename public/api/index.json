@@ -1,0 +1,24 @@
+{
+  "name": "Plan Your Crib JSON API",
+  "version": 1,
+  "mediaType": "application/json",
+  "schema": "/api/plan.schema.json",
+  "example": "/api/example-plan.json",
+  "itemCatalog": "/api/item-catalog.json",
+  "units": "inches",
+  "coordinateSystem": {
+    "x": "increases rightward",
+    "y": "increases downward",
+    "rotation": "clockwise degrees"
+  },
+  "generationRules": [
+    "Return one JSON object only, with all six top-level fields.",
+    "Use globally unique stable ids and valid roomId references.",
+    "Rooms store interior polygons; do not add their perimeter walls to walls[].",
+    "Write room points in positive shoelace order and do not repeat the first point.",
+    "An opening edgeIndex addresses points[i] to points[(i+1) mod n].",
+    "Keep each opening on its edge: width/2 <= offset <= edgeLength - width/2.",
+    "Use catalog template defaults unless the user requests another footprint.",
+    "Keep furniture inside rooms and avoid overlaps unless the user asks otherwise."
+  ]
+}
