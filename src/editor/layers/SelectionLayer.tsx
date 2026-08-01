@@ -1,8 +1,8 @@
 import { memo } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { midpoint, type Vec2 } from '@/core/geometry'
-import { itemCorners, openingFrame, roomEdges, roomRing } from '@/model/derive'
-import type { Item, Opening, Plan, Room } from '@/model/types'
+import { itemCorners, openingFrame, roomEdges, roomRing, wallCorners } from '@/model/derive'
+import type { Item, Opening, Plan, Room, Wall } from '@/model/types'
 import { worldToScreen } from '@/state/transform'
 import type { Viewport } from '@/state/types'
 import { useScene } from '../EditorContext'
@@ -12,6 +12,7 @@ export interface SelectionLayerProps {
   plan: Plan
   viewport: Viewport
   rooms: readonly Room[]
+  walls: readonly Wall[]
   items: readonly Item[]
   openings: readonly Opening[]
   selectedVertex: { roomId: string; index: number } | null
@@ -26,11 +27,12 @@ export const SelectionLayer = memo(function SelectionLayer({
   plan,
   viewport,
   rooms,
+  walls,
   items,
   openings,
   selectedVertex,
 }: SelectionLayerProps) {
-  const single = rooms.length + items.length + openings.length === 1
+  const single = rooms.length + walls.length + items.length + openings.length === 1
 
   return (
     <g className="selection-layer">
@@ -47,12 +49,57 @@ export const SelectionLayer = memo(function SelectionLayer({
           selectedVertex={selectedVertex}
         />
       ))}
+      {walls.map((wall) => (
+        <WallSelection key={wall.id} wall={wall} viewport={viewport} showHandles={single} />
+      ))}
       {openings.map((opening) => (
         <OpeningSelection key={opening.id} plan={plan} opening={opening} viewport={viewport} />
       ))}
     </g>
   )
 })
+
+function WallSelection({
+  wall,
+  viewport,
+  showHandles,
+}: {
+  wall: Wall
+  viewport: Viewport
+  showHandles: boolean
+}) {
+  const scene = useScene()
+  const corners = wallCorners(wall).map((point) => worldToScreen(viewport, point))
+  const endpoints = [wall.a, wall.b].map((point) => worldToScreen(viewport, point))
+
+  return (
+    <g>
+      <polygon
+        points={corners.map((point) => `${point.x},${point.y}`).join(' ')}
+        fill="none"
+        stroke="var(--accent)"
+        strokeWidth={1.5}
+        pointerEvents="none"
+      />
+      {showHandles && endpoints.map((point, index) => (
+        <circle
+          key={index}
+          data-wall-endpoint={`${wall.id}:${index === 0 ? 'a' : 'b'}`}
+          cx={point.x}
+          cy={point.y}
+          r={5.5}
+          fill="var(--surface-panel)"
+          stroke="var(--accent)"
+          strokeWidth={1.5}
+          style={{ cursor: 'crosshair' }}
+          onPointerDown={(event) => scene.startWallEndpointDrag(wall.id, index === 0 ? 'a' : 'b', event)}
+        >
+          <title>Drag to move this endpoint</title>
+        </circle>
+      ))}
+    </g>
+  )
+}
 
 function ItemSelection({
   item,
@@ -126,6 +173,7 @@ function ItemSelection({
         pointerEvents="none"
       />
       <circle
+        data-item-rotate={item.id}
         cx={rotateAt.x}
         cy={rotateAt.y}
         r={5.5}

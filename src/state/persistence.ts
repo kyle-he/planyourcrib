@@ -87,6 +87,7 @@ export function parsePlan(value: unknown): Plan | null {
     version: 1,
     name: typeof candidate.name === 'string' ? candidate.name : 'Imported plan',
     rooms: candidate.rooms,
+    walls: Array.isArray(candidate.walls) ? candidate.walls : [],
     items: candidate.items,
     openings: Array.isArray(candidate.openings) ? candidate.openings : [],
   }

@@ -8,9 +8,10 @@ import type {
   Room,
   SelectionRef,
   Settings,
+  Wall,
 } from '@/model/types'
 
-export type ToolId = 'select' | 'room' | 'opening' | 'item' | 'measure'
+export type ToolId = 'select' | 'room' | 'wall' | 'opening' | 'item' | 'measure'
 
 export interface Viewport {
   /** Pixels per inch. */
@@ -49,6 +50,9 @@ export interface PlanSlice {
   moveRoomVertex: (id: string, index: number, point: Vec2) => void
   insertRoomVertex: (id: string, afterIndex: number, point: Vec2) => void
   removeRoomVertex: (id: string, index: number) => void
+
+  addWall: (wall: Wall) => void
+  updateWall: (id: string, patch: Partial<Omit<Wall, 'id'>>) => void
 
   addOpening: (opening: Opening) => void
   updateOpening: (id: string, patch: Partial<Omit<Opening, 'id'>>) => void

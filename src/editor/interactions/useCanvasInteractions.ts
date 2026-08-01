@@ -1,21 +1,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, RefObject } from 'react'
 import {
+  add,
   clamp,
+  distance,
+  distanceToSegment,
   dot,
+  midpoint,
+  normalize,
   polygonBounds,
   rectFromPoints,
   rectsIntersect,
   roundTo,
+  scale,
   sub,
   toDegrees,
   type Rect,
   type Vec2,
 } from '@/core/geometry'
 import { getOpeningTemplate } from '@/model/catalog'
-import { itemCorners, maxOpeningOffset, roomEdge, roomOuterRing } from '@/model/derive'
-import { createItem, createOpening, createRoomFromRect, nextRoomName } from '@/model/factory'
-import type { Plan, SelectionRef } from '@/model/types'
+import { itemCorners, maxOpeningOffset, roomEdge, roomOuterRing, wallCorners } from '@/model/derive'
+import { createItem, createOpening, createRoomFromRect, createWall, nextRoomName } from '@/model/factory'
+import type { Item, Plan, SelectionRef } from '@/model/types'
 import {
   analyzeWallTopology,
   otherSideOfSharedWall,
@@ -28,12 +34,15 @@ import {
 import { useEditorStore } from '@/state/store'
 import { screenToWorld } from '@/state/transform'
 import {
+  findNearbyWallSegment,
   placementCenter,
   snapMove,
   snapPoint,
+  snapPointToWallSegments,
   snapVertexToWalls,
   type SnapContext,
   type SnapGuide,
+  type WallSnapSegment,
 } from '../snapping'
 import {
   findNearestWall,
@@ -56,9 +65,12 @@ const MIN_ROOM_SIZE = 12
 const OPENING_SNAP_DISTANCE = 48
 const DRAG_THRESHOLD_PX = 3
 const WALL_ANGLE_SNAP_TOLERANCE_PX = 10
+const FREESTANDING_WALL_ANGLE_SNAP_DEGREES = 6
+const ITEM_WALL_ROTATION_SNAP_DISTANCE_PX = 36
 
 interface MoveOrigin {
   rooms: { id: string; points: Vec2[] }[]
+  walls: { id: string; a: Vec2; b: Vec2 }[]
   items: { id: string; center: Vec2 }[]
   openings: { id: string; offset: number }[]
 }
@@ -76,7 +88,14 @@ type DragState =
       moved: boolean
     }
   | { kind: 'resize'; itemId: string; handle: ResizeHandle; start: ItemBoxSnapshot }
-  | { kind: 'rotate'; itemId: string; center: Vec2; pointerAngle: number; startRotation: number }
+  | {
+      kind: 'rotate'
+      itemId: string
+      center: Vec2
+      pointerAngle: number
+      startRotation: number
+      wall: WallSnapSegment | null
+    }
   | { kind: 'vertex'; roomId: string; index: number }
   | {
       kind: 'wall'
@@ -87,9 +106,11 @@ type DragState =
       normal: Vec2
       connected: (RoomEdgeRef & { startPoints: Vec2[] }) | null
     }
+  | { kind: 'wall-endpoint'; wallId: string; endpoint: 'a' | 'b' }
   | { kind: 'opening'; openingId: string }
   | { kind: 'opening-resize'; openingId: string; handle: OpeningResizeHandle }
   | { kind: 'draw-room'; origin: Vec2 }
+  | { kind: 'draw-wall'; origin: Vec2; host: WallSnapSegment | null }
   | { kind: 'measure'; origin: Vec2; completesAnchor: boolean; moved: boolean }
 
 type MeasureCycle = { origin: Vec2 } | null
@@ -229,6 +250,7 @@ export function useCanvasInteractions(
       drag.current = null
       patchPreview({
         draftRoom: null,
+        draftWall: null,
         marquee: null,
         guides: [],
         sizeHint: null,
@@ -292,18 +314,21 @@ export function useCanvasInteractions(
     (event: ReactPointerEvent, refs: readonly SelectionRef[]) => {
       const { plan } = useEditorStore.getState()
       const roomIds = new Set(refs.filter((r) => r.kind === 'room').map((r) => r.id))
+      const wallIds = new Set(refs.filter((r) => r.kind === 'wall').map((r) => r.id))
       const itemIds = new Set(refs.filter((r) => r.kind === 'item').map((r) => r.id))
       const openingIds = new Set(refs.filter((r) => r.kind === 'opening').map((r) => r.id))
 
       const rooms = plan.rooms.filter((room) => roomIds.has(room.id))
+      const walls = plan.walls.filter((wall) => wallIds.has(wall.id))
       const items = plan.items.filter((item) => itemIds.has(item.id) && !item.locked)
       const openings = plan.openings.filter(
         (opening) => openingIds.has(opening.id) && !roomIds.has(opening.roomId),
       )
-      if (rooms.length + items.length + openings.length === 0) return
+      if (rooms.length + walls.length + items.length + openings.length === 0) return
 
       const points: Vec2[] = [
         ...rooms.flatMap((room) => roomOuterRing(room)),
+        ...walls.flatMap((wall) => wallCorners(wall)),
         ...items.flatMap((item) => itemCorners(item)),
       ]
       const bounds = points.length > 0 ? polygonBounds(points) : null
@@ -320,12 +345,13 @@ export function useCanvasInteractions(
         startWorld: worldPoint(event),
         origin: {
           rooms: rooms.map((room) => ({ id: room.id, points: room.points.map((p) => ({ ...p })) })),
+          walls: walls.map((wall) => ({ id: wall.id, a: { ...wall.a }, b: { ...wall.b } })),
           items: items.map((item) => ({ id: item.id, center: { ...item.center } })),
           openings: openings.map((opening) => ({ id: opening.id, offset: opening.offset })),
         },
         anchors,
         bounds,
-        excluded: new Set([...roomIds, ...itemIds]),
+        excluded: new Set([...roomIds, ...wallIds, ...itemIds]),
         moved: false,
       }
       useEditorStore.getState().beginBatch()
@@ -376,17 +402,27 @@ export function useCanvasInteractions(
       startItemRotate: (itemId, event) => {
         if (event.button !== 0) return
         event.stopPropagation()
-        const item = useEditorStore.getState().plan.items.find((candidate) => candidate.id === itemId)
+        const store = useEditorStore.getState()
+        const item = store.plan.items.find((candidate) => candidate.id === itemId)
         if (!item || item.locked) return
         const pointer = worldPoint(event)
+        const nearbyWall = store.settings.snapRotation
+          ? findNearbyWallSegment(
+              [item.center, ...itemCorners(item)],
+              snapContext(new Set([itemId])),
+              ITEM_WALL_ROTATION_SNAP_DISTANCE_PX,
+              false,
+            )
+          : null
         drag.current = {
           kind: 'rotate',
           itemId,
           center: item.center,
           pointerAngle: toDegrees(Math.atan2(pointer.y - item.center.y, pointer.x - item.center.x)),
           startRotation: item.rotation,
+          wall: nearbyWall?.segment ?? null,
         }
-        useEditorStore.getState().beginBatch()
+        store.beginBatch()
         capture(event)
       },
 
@@ -454,6 +490,17 @@ export function useCanvasInteractions(
         capture(event)
       },
 
+      startWallEndpointDrag: (wallId, endpoint, event) => {
+        if (event.button !== 0) return
+        event.stopPropagation()
+        const store = useEditorStore.getState()
+        if (!store.plan.walls.some((wall) => wall.id === wallId)) return
+        store.select({ kind: 'wall', id: wallId })
+        drag.current = { kind: 'wall-endpoint', wallId, endpoint }
+        store.beginBatch()
+        capture(event)
+      },
+
       startOpeningDrag: (openingId, event) => {
         if (event.button !== 0) return
         event.stopPropagation()
@@ -503,6 +550,18 @@ export function useCanvasInteractions(
           const origin = snapPoint(world, snapContext()).delta
           drag.current = { kind: 'draw-room', origin }
           patchPreview({ draftRoom: { ...origin, width: 0, height: 0 } })
+          capture(event)
+          return
+        }
+        case 'wall': {
+          const context = snapContext()
+          const attachment = snapPointToWallSegments(world, context)
+          const origin = attachment?.delta ?? snapPoint(world, context).delta
+          drag.current = { kind: 'draw-wall', origin, host: attachment?.segment ?? null }
+          patchPreview({
+            draftWall: { a: origin, b: origin, thickness: store.settings.wallThickness },
+            guides: attachment?.guides ?? [],
+          })
           capture(event)
           return
         }
@@ -707,8 +766,27 @@ export function useCanvasInteractions(
             Math.atan2(world.y - state.center.y, world.x - state.center.x),
           )
           const raw = state.startRotation + (angle - state.pointerAngle)
+          const shouldSnapRotation = store.settings.snapRotation && !event.altKey
+          const wallRotation = shouldSnapRotation && state.wall
+            ? snapItemRotationParallelToWall(raw, state.wall)
+            : null
+          const rotation = ((
+            wallRotation ?? (shouldSnapRotation ? roundTo(raw, 15) : raw)
+          ) % 360 + 360) % 360
+          const item = store.plan.items.find((candidate) => candidate.id === state.itemId)
           store.updateItem(state.itemId, {
-            rotation: ((event.altKey ? raw : roundTo(raw, 15)) % 360 + 360) % 360,
+            rotation,
+          })
+          const itemEdge = wallRotation !== null && item && state.wall
+            ? parallelItemEdge({ ...item, rotation }, state.wall)
+            : null
+          patchPreview({
+            guides: itemEdge && state.wall
+              ? [
+                  { axis: 'segment', a: state.wall.a, b: state.wall.b },
+                  { axis: 'segment', a: itemEdge.a, b: itemEdge.b },
+                ]
+              : [],
           })
           return
         }
@@ -789,6 +867,28 @@ export function useCanvasInteractions(
           return
         }
 
+        case 'wall-endpoint': {
+          const wall = store.plan.walls.find((candidate) => candidate.id === state.wallId)
+          if (!wall) return
+          const fixed = state.endpoint === 'a' ? wall.b : wall.a
+          const context = snapContext(new Set([state.wallId]))
+          const host = store.settings.snapRotation
+            ? snapPointToWallSegments(fixed, context, 1.5, false)?.segment ?? null
+            : null
+          const resolved = resolveFreestandingWallEndpoint(
+            world,
+            fixed,
+            context,
+            host,
+            event.shiftKey,
+          )
+          store.updateWall(state.wallId, {
+            [state.endpoint]: resolved.point,
+          })
+          patchPreview({ guides: resolved.guides })
+          return
+        }
+
         case 'opening': {
           const opening = store.plan.openings.find((candidate) => candidate.id === state.openingId)
           if (!opening) return
@@ -830,6 +930,25 @@ export function useCanvasInteractions(
         case 'draw-room': {
           const corner = snapPoint(world, snapContext()).delta
           patchPreview({ draftRoom: rectFromPoints(state.origin, corner) })
+          return
+        }
+
+        case 'draw-wall': {
+          const resolved = resolveFreestandingWallEndpoint(
+            world,
+            state.origin,
+            snapContext(),
+            state.host,
+            event.shiftKey,
+          )
+          patchPreview({
+            draftWall: {
+              a: state.origin,
+              b: resolved.point,
+              thickness: store.settings.wallThickness,
+            },
+            guides: resolved.guides,
+          })
           return
         }
 
@@ -884,6 +1003,24 @@ export function useCanvasInteractions(
             store.addRoom(room)
             store.setTool('select')
             store.select({ kind: 'room', id: room.id })
+          }
+          return
+        }
+        case 'draw-wall': {
+          const resolved = resolveFreestandingWallEndpoint(
+            worldPoint(event),
+            state.origin,
+            snapContext(),
+            state.host,
+            event.shiftKey,
+          )
+          const end = resolved.point
+          patchPreview({ draftWall: null, guides: [] })
+          if (distance(state.origin, end) >= 8) {
+            const wall = createWall(state.origin, end, store.settings.wallThickness)
+            store.addWall(wall)
+            store.setTool('select')
+            store.select({ kind: 'wall', id: wall.id })
           }
           return
         }
@@ -972,7 +1109,7 @@ function frameForTouches(points: ReadonlyMap<number, Vec2>) {
 }
 
 function dragUsesHistoryBatch(state: DragState) {
-  return !['pan', 'marquee', 'draw-room', 'measure'].includes(state.kind)
+  return !['pan', 'marquee', 'draw-room', 'draw-wall', 'measure'].includes(state.kind)
 }
 
 function guidesForSharedWalls(walls: readonly SharedWall[]): SnapGuide[] {
@@ -1008,6 +1145,120 @@ function snapRoomVertexToRightAngle(
   return closest
 }
 
+/**
+ * Gently settle a freestanding wall to horizontal or vertical when the pointer
+ * is already close. Six degrees keeps the assistance useful without pulling a
+ * deliberately angled wall away from the cursor.
+ */
+function snapWallToRightAngle(origin: Vec2, point: Vec2): Vec2 {
+  const dx = point.x - origin.x
+  const dy = point.y - origin.y
+  const tolerance = Math.tan((FREESTANDING_WALL_ANGLE_SNAP_DEGREES * Math.PI) / 180)
+  if (Math.abs(dy) <= Math.abs(dx) * tolerance) return { x: point.x, y: origin.y }
+  if (Math.abs(dx) <= Math.abs(dy) * tolerance) return { x: origin.x, y: point.y }
+  return point
+}
+
+function resolveFreestandingWallEndpoint(
+  world: Vec2,
+  origin: Vec2,
+  context: SnapContext,
+  host: WallSnapSegment | null,
+  constrainAxis: boolean,
+): { point: Vec2; guides: SnapGuide[] } {
+  // A physical join wins over angle and grid assistance when the pointer is
+  // close enough to another wall centreline.
+  const attachment = snapPointToWallSegments(world, context)
+  if (attachment) return { point: attachment.delta, guides: attachment.guides }
+
+  const snapped = snapPoint(world, context)
+  if (constrainAxis) {
+    return {
+      point: add(origin, lockAxis(sub(snapped.delta, origin))),
+      guides: snapped.guides,
+    }
+  }
+
+  const perpendicular = context.settings.snapRotation && host
+    ? snapWallPerpendicular(origin, snapped.delta, host)
+    : null
+  if (perpendicular && host) {
+    return {
+      point: perpendicular,
+      guides: [
+        { axis: 'segment', a: host.a, b: host.b },
+        { axis: 'segment', a: origin, b: perpendicular },
+      ],
+    }
+  }
+
+  return {
+    point: context.settings.snapRotation
+      ? snapWallToRightAngle(origin, snapped.delta)
+      : snapped.delta,
+    guides: snapped.guides,
+  }
+}
+
+/** Softly square a wall to the segment hosting its fixed endpoint. */
+function snapWallPerpendicular(
+  origin: Vec2,
+  point: Vec2,
+  host: WallSnapSegment,
+): Vec2 | null {
+  const delta = sub(point, origin)
+  const normal = { x: -host.direction.y, y: host.direction.x }
+  const perpendicularDistance = dot(delta, normal)
+  const parallelError = Math.abs(dot(delta, host.direction))
+  const tolerance = Math.tan((FREESTANDING_WALL_ANGLE_SNAP_DEGREES * Math.PI) / 180)
+  if (
+    Math.abs(perpendicularDistance) < 1e-6 ||
+    parallelError > Math.abs(perpendicularDistance) * tolerance
+  ) {
+    return null
+  }
+  return add(origin, scale(normal, perpendicularDistance))
+}
+
+/** Return the nearest rotation whose width or depth axis parallels the wall. */
+function snapItemRotationParallelToWall(
+  rotation: number,
+  wall: WallSnapSegment,
+): number | null {
+  const wallAngle = toDegrees(Math.atan2(wall.direction.y, wall.direction.x))
+  const target = wallAngle + Math.round((rotation - wallAngle) / 90) * 90
+  return Math.abs(target - rotation) <= FREESTANDING_WALL_ANGLE_SNAP_DEGREES
+    ? target
+    : null
+}
+
+/** Pick the parallel object edge closest to the wall for the second guide. */
+function parallelItemEdge(
+  item: Item,
+  wall: WallSnapSegment,
+): { a: Vec2; b: Vec2 } | null {
+  const [topLeft, topRight, bottomRight, bottomLeft] = itemCorners(item)
+  if (!topLeft || !topRight || !bottomRight || !bottomLeft) return null
+  const edges = [
+    { a: topLeft, b: topRight },
+    { a: topRight, b: bottomRight },
+    { a: bottomRight, b: bottomLeft },
+    { a: bottomLeft, b: topLeft },
+  ]
+  let best: { a: Vec2; b: Vec2 } | null = null
+  let bestDistance = Infinity
+  for (const edge of edges) {
+    const direction = normalize(sub(edge.b, edge.a))
+    if (Math.abs(dot(direction, wall.direction)) < 0.999) continue
+    const gap = distanceToSegment(midpoint(edge.a, edge.b), wall.a, wall.b)
+    if (gap < bestDistance) {
+      bestDistance = gap
+      best = edge
+    }
+  }
+  return best
+}
+
 function moveRecipe(origin: MoveOrigin, delta: Vec2) {
   return (plan: Plan) => {
     for (const snapshot of origin.rooms) {
@@ -1017,6 +1268,12 @@ function moveRecipe(origin: MoveOrigin, delta: Vec2) {
         x: point.x + delta.x,
         y: point.y + delta.y,
       }))
+    }
+    for (const snapshot of origin.walls) {
+      const wall = plan.walls.find((candidate) => candidate.id === snapshot.id)
+      if (!wall) continue
+      wall.a = { x: snapshot.a.x + delta.x, y: snapshot.a.y + delta.y }
+      wall.b = { x: snapshot.b.x + delta.x, y: snapshot.b.y + delta.y }
     }
     for (const snapshot of origin.items) {
       const item = plan.items.find((candidate) => candidate.id === snapshot.id)
@@ -1048,6 +1305,11 @@ function entitiesInRect(plan: Plan, marquee: Rect): SelectionRef[] {
   for (const room of plan.rooms) {
     if (rectsIntersect(marquee, polygonBounds(roomOuterRing(room)))) {
       refs.push({ kind: 'room', id: room.id })
+    }
+  }
+  for (const wall of plan.walls) {
+    if (rectsIntersect(marquee, polygonBounds(wallCorners(wall)))) {
+      refs.push({ kind: 'wall', id: wall.id })
     }
   }
   for (const item of plan.items) {

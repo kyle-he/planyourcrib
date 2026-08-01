@@ -48,6 +48,7 @@ function ItemShape({ item }: { item: Item }) {
 
   return (
     <g
+      data-plan-item={item.id}
       transform={`translate(${item.center.x} ${item.center.y}) rotate(${item.rotation})`}
       onPointerDown={(event) => scene.startMove({ kind: 'item', id: item.id }, event)}
       onPointerEnter={() => scene.hover({ kind: 'item', id: item.id })}

@@ -45,6 +45,7 @@ export function SettingsMenu({
         <section className="settings-popover__section">
           <div className="settings-popover__title">Plan summary</div>
           <Readout label="Rooms" value={String(plan.rooms.length)} />
+          <Readout label="Freestanding walls" value={String(plan.walls.length)} />
           <Readout label="Doors & windows" value={String(plan.openings.length)} />
           <Readout label="Furniture" value={String(plan.items.length)} />
           <Readout label="Total floor area" value={formatArea(totalArea, unit)} />

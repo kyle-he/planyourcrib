@@ -11,6 +11,7 @@ const FALLBACK: SceneHandlers = {
   startVertexInsert: noop,
   removeVertex: noop,
   startWallDrag: noop,
+  startWallEndpointDrag: noop,
   startOpeningDrag: noop,
   startOpeningResize: noop,
   insertVertex: noop,

@@ -22,7 +22,7 @@ import {
   type Rect,
   type Vec2,
 } from '@/core/geometry'
-import type { Item, Opening, Plan, Room } from './types'
+import type { Item, Opening, Plan, Room, Wall } from './types'
 
 export interface WallEdge {
   index: number
@@ -117,6 +117,17 @@ export const roomArea = (room: Room): number => polygonArea(room.points)
 export const roomCentroid = (room: Room): Vec2 => polygonCentroid(room.points)
 export const roomBounds = (room: Room): Rect => polygonBounds(roomOuterRing(room))
 
+/** Four corners of a freestanding wall band, centred on its stored segment. */
+export function wallCorners(wall: Wall): Vec2[] {
+  const direction = normalize(sub(wall.b, wall.a))
+  const normal = { x: -direction.y, y: direction.x }
+  const offset = scale(normal, wall.thickness / 2)
+  return [add(wall.a, offset), add(wall.b, offset), sub(wall.b, offset), sub(wall.a, offset)]
+}
+
+export const wallLength = (wall: Wall): number => distance(wall.a, wall.b)
+export const wallBounds = (wall: Wall): Rect => polygonBounds(wallCorners(wall))
+
 /** Where an opening sits in world space, plus the frame used to draw it. */
 export interface OpeningFrame {
   center: Vec2
@@ -181,6 +192,7 @@ export function openingBounds(plan: Plan, opening: Opening): Rect | null {
 export function planBounds(plan: Plan): Rect | null {
   const rects: Rect[] = [
     ...plan.rooms.map(roomBounds),
+    ...plan.walls.map(wallBounds),
     ...plan.items.map(itemBounds),
   ]
   return unionRects(rects.filter((r) => r.width > 0 || r.height > 0))
@@ -194,6 +206,8 @@ export const findRoom = (plan: Plan, id: string): Room | undefined =>
   plan.rooms.find((room) => room.id === id)
 export const findItem = (plan: Plan, id: string): Item | undefined =>
   plan.items.find((item) => item.id === id)
+export const findWall = (plan: Plan, id: string): Wall | undefined =>
+  plan.walls.find((wall) => wall.id === id)
 export const findOpening = (plan: Plan, id: string): Opening | undefined =>
   plan.openings.find((opening) => opening.id === id)
 

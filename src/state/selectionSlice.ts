@@ -45,6 +45,7 @@ export const createSelectionSlice: StateCreator<EditorStore, [], [], SelectionSl
     set({
       selection: [
         ...plan.rooms.map((room): SelectionRef => ({ kind: 'room', id: room.id })),
+        ...plan.walls.map((wall): SelectionRef => ({ kind: 'wall', id: wall.id })),
         ...plan.items.map((item): SelectionRef => ({ kind: 'item', id: item.id })),
       ],
       selectedVertex: null,

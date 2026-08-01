@@ -1,7 +1,7 @@
 import type { Vec2 } from '@/core/geometry'
 import type { UnitSystem } from '@/core/units'
 
-export type EntityKind = 'room' | 'item' | 'opening'
+export type EntityKind = 'room' | 'wall' | 'item' | 'opening'
 
 /** A room is stored as its *interior* ring; walls are grown outward from it. */
 export interface Room {
@@ -11,6 +11,15 @@ export interface Room {
   points: Vec2[]
   wallThickness: number
   floor: string
+}
+
+/** A straight wall segment that is not tied to a room perimeter. */
+export interface Wall {
+  id: string
+  /** Wall centreline endpoints, in inches. */
+  a: Vec2
+  b: Vec2
+  thickness: number
 }
 
 export type OpeningKind =
@@ -64,6 +73,7 @@ export interface Plan {
   version: 1
   name: string
   rooms: Room[]
+  walls: Wall[]
   openings: Opening[]
   items: Item[]
 }
@@ -76,6 +86,8 @@ export interface Settings {
   showGrid: boolean
   snapToGrid: boolean
   snapToObjects: boolean
+  /** Angle assistance for walls and object rotation. */
+  snapRotation: boolean
   showDimensions: boolean
   showAreas: boolean
   showNames: boolean
@@ -87,10 +99,14 @@ export interface SelectionRef {
   id: string
 }
 
-export type Entity = Room | Opening | Item
+export type Entity = Room | Wall | Opening | Item
 
 export function isRoom(entity: Entity): entity is Room {
   return 'points' in entity
+}
+
+export function isWall(entity: Entity): entity is Wall {
+  return 'a' in entity && 'b' in entity
 }
 
 export function isOpening(entity: Entity): entity is Opening {

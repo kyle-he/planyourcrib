@@ -24,6 +24,7 @@ export type GlyphKey =
   | 'piano'
   | 'crib'
   | 'fridge'
+  | 'fridgeSingle'
   | 'range'
   | 'dishwasher'
   | 'microwave'
@@ -40,6 +41,7 @@ export type GlyphKey =
   | 'stairs'
   | 'column'
   | 'fireplace'
+  | 'radiator'
   | 'image'
 
 export type CategoryId =
@@ -119,7 +121,8 @@ const RAW_ITEMS: readonly ItemTemplate[] = [
   { id: 'crib', name: 'Crib', category: 'bedroom', width: 52, depth: 28, glyph: 'crib', wallMounted: true },
 
   // Kitchen ----------------------------------------------------------------
-  { id: 'fridge', name: 'Refrigerator', category: 'kitchen', width: 36, depth: 32, glyph: 'fridge', wallMounted: true },
+  { id: 'fridge', name: 'Double-door refrigerator', category: 'kitchen', width: 36, depth: 32, glyph: 'fridge', wallMounted: true },
+  { id: 'fridge-single', name: 'Single-door refrigerator', category: 'kitchen', width: 30, depth: 32, glyph: 'fridgeSingle', wallMounted: true },
   { id: 'range', name: 'Range', category: 'kitchen', width: 30, depth: 26, glyph: 'range', wallMounted: true },
   { id: 'wall-oven', name: 'Wall oven', category: 'kitchen', width: 30, depth: 24, glyph: 'range', wallMounted: true },
   { id: 'dishwasher', name: 'Dishwasher', category: 'kitchen', width: 24, depth: 24, glyph: 'dishwasher', wallMounted: true },
@@ -159,6 +162,7 @@ const RAW_ITEMS: readonly ItemTemplate[] = [
   // Structure --------------------------------------------------------------
   { id: 'stairs', name: 'Stairs', category: 'structure', width: 36, depth: 108, glyph: 'stairs', wallMounted: true },
   { id: 'fireplace', name: 'Fireplace', category: 'structure', width: 60, depth: 18, glyph: 'fireplace', wallMounted: true },
+  { id: 'radiator', name: 'Radiator', category: 'structure', width: 36, depth: 4, glyph: 'radiator', wallMounted: true },
   { id: 'column', name: 'Column', category: 'structure', width: 12, depth: 12, glyph: 'column' },
   { id: 'closet', name: 'Closet', category: 'structure', width: 60, depth: 26, glyph: 'wardrobe', wallMounted: true },
 ]

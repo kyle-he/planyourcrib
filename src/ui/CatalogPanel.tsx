@@ -26,6 +26,7 @@ export function CatalogPanel({ onCollapse }: CatalogPanelProps) {
   const openingKind = useEditorStore((state) => state.openingKind)
   const startPlacingItem = useEditorStore((state) => state.startPlacingItem)
   const startPlacingOpening = useEditorStore((state) => state.startPlacingOpening)
+  const setTool = useEditorStore((state) => state.setTool)
 
   /** Pick a picture, then arm the item tool so the next canvas click drops it. */
   const addImage = async () => {
@@ -124,6 +125,23 @@ export function CatalogPanel({ onCollapse }: CatalogPanelProps) {
                     </span>
                   </button>
                 ))}
+              </div>
+            </Collapsible>
+
+            <Collapsible title="Walls" defaultOpen={false}>
+              <div className="stack">
+                <button
+                  type="button"
+                  className={`btn btn--block${tool === 'wall' ? ' is-active' : ''}`}
+                  title="Click and drag on the plan to make a wall"
+                  onClick={() => setTool('wall')}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Icon name="wall" size={15} />
+                    Create Wall
+                  </span>
+                </button>
+                <p className="catalog-help">Click and drag to make wall</p>
               </div>
             </Collapsible>
 

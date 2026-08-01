@@ -5,15 +5,16 @@ import { Button } from '../components/Button'
 import { ItemInspector } from './ItemInspector'
 import { OpeningInspector } from './OpeningInspector'
 import { RoomInspector } from './RoomInspector'
+import { WallInspector } from './WallInspector'
 
 export function Inspector() {
   const plan = usePlan()
-  const { rooms, items, openings } = useResolvedSelection()
+  const { rooms, walls, items, openings } = useResolvedSelection()
   const selectedVertex = useEditorStore((state) => state.selectedVertex)
   const vertexRoom = selectedVertex
     ? plan.rooms.find((room) => room.id === selectedVertex.roomId)
     : undefined
-  const total = rooms.length + items.length + openings.length
+  const total = rooms.length + walls.length + items.length + openings.length
   if (total === 0 && !vertexRoom) return null
 
   return (
@@ -22,6 +23,7 @@ export function Inspector() {
         <div className="section">
           {vertexRoom && selectedVertex && <VertexInspector room={vertexRoom} index={selectedVertex.index} />}
           {total === 1 && rooms[0] && <RoomInspector room={rooms[0]} />}
+          {total === 1 && walls[0] && <WallInspector wall={walls[0]} />}
           {total === 1 && items[0] && <ItemInspector item={items[0]} />}
           {total === 1 && openings[0] && <OpeningInspector opening={openings[0]} />}
           {total > 1 && <MultiSelection hasItems={items.length > 0} />}

@@ -534,6 +534,13 @@ body[data-pointer-dragging='true'] .app * {
   font-variant-numeric: tabular-nums;
 }
 
+.catalog-help {
+  margin: -2px 2px 0;
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--text-tertiary);
+}
+
 /* -------------------------------------------------------------- inspector */
 
 .stack {

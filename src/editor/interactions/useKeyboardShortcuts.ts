@@ -8,6 +8,7 @@ const TOOL_KEYS: Record<string, ToolId> = {
   '1': 'select',
   r: 'room',
   '2': 'room',
+  l: 'wall',
   m: 'measure',
 }
 
@@ -141,7 +142,10 @@ export function useKeyboardShortcuts({ onToggleShortcuts }: ShortcutCallbacks): 
       if (lower === 'g') {
         store.updateSettings(
           event.shiftKey
-            ? { snapToGrid: !store.settings.snapToGrid }
+            ? {
+                snapToGrid: !(store.settings.snapToGrid && store.settings.snapToObjects),
+                snapToObjects: !(store.settings.snapToGrid && store.settings.snapToObjects),
+              }
             : { showGrid: !store.settings.showGrid },
         )
         return

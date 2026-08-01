@@ -9,6 +9,7 @@ const GROUPS: readonly { title: string; items: readonly [string, string[]][] }[]
     items: [
       ['Select', ['S']],
       ['Draw room', ['R']],
+      ['Create wall', ['L']],
       ['Place door', ['D']],
       ['Place window', ['W']],
       ['Measure', ['M']],

@@ -2,7 +2,7 @@ import { memo } from 'react'
 import { distance, type Vec2 } from '@/core/geometry'
 import { formatLength, type UnitSystem } from '@/core/units'
 import { getOpeningTemplate } from '@/model/catalog'
-import { openingFrame } from '@/model/derive'
+import { openingFrame, wallCorners } from '@/model/derive'
 import type { GlyphKey } from '@/model/catalog'
 import type { OpeningKind, Plan } from '@/model/types'
 import { useImageAsset } from '@/state/imageAssets'
@@ -43,6 +43,7 @@ export const PreviewLayer = memo(function PreviewLayer({
           return (
             <line
               key={index}
+              data-snap-guide="segment"
               x1={from.x}
               y1={from.y}
               x2={to.x}
@@ -123,6 +124,10 @@ export const PreviewLayer = memo(function PreviewLayer({
         </>
       )}
 
+      {preview.draftWall && (
+        <WallDraft wall={preview.draftWall} viewport={viewport} unit={unit} />
+      )}
+
       {preview.measure && (
         <MeasureTape a={preview.measure.a} b={preview.measure.b} viewport={viewport} unit={unit} />
       )}
@@ -142,6 +147,45 @@ export const PreviewLayer = memo(function PreviewLayer({
     </g>
   )
 })
+
+function WallDraft({
+  wall,
+  viewport,
+  unit,
+}: {
+  wall: NonNullable<PreviewState['draftWall']>
+  viewport: Viewport
+  unit: UnitSystem
+}) {
+  const corners = wallCorners({ id: 'draft', ...wall }).map((point) => worldToScreen(viewport, point))
+  const a = worldToScreen(viewport, wall.a)
+  const b = worldToScreen(viewport, wall.b)
+  const dx = wall.b.x - wall.a.x
+  const dy = wall.b.y - wall.a.y
+  const length = Math.hypot(dx, dy) || 1
+  const normal = { x: -dy / length, y: dx / length }
+
+  return (
+    <g>
+      <polygon
+        points={corners.map((point) => `${point.x},${point.y}`).join(' ')}
+        fill="var(--accent)"
+        fillOpacity={0.16}
+        stroke="var(--accent)"
+        strokeWidth={1.5}
+        strokeDasharray="6 4"
+      />
+      <DimensionLine
+        a={a}
+        b={b}
+        direction={normal}
+        offset={wall.thickness * viewport.scale / 2 + 16}
+        label={formatLength(distance(wall.a, wall.b), unit)}
+        emphasis
+      />
+    </g>
+  )
+}
 
 function screenRect(
   rect: { x: number; y: number; width: number; height: number },

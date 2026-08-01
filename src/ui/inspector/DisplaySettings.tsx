@@ -56,14 +56,17 @@ export function DisplaySettings() {
           onChange={(showGrid) => updateSettings({ showGrid })}
         />
         <Toggle
-          label="Snap to grid & 90° walls"
-          checked={settings.snapToGrid}
-          onChange={(snapToGrid) => updateSettings({ snapToGrid })}
+          label="Movement snapping"
+          checked={settings.snapToGrid && settings.snapToObjects}
+          onChange={(enabled) => updateSettings({
+            snapToGrid: enabled,
+            snapToObjects: enabled,
+          })}
         />
         <Toggle
-          label="Snap to objects"
-          checked={settings.snapToObjects}
-          onChange={(snapToObjects) => updateSettings({ snapToObjects })}
+          label="Rotation snapping"
+          checked={settings.snapRotation}
+          onChange={(snapRotation) => updateSettings({ snapRotation })}
         />
         <Toggle
           label="Wall dimensions"

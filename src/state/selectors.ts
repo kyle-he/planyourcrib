@@ -2,8 +2,8 @@ import { useMemo } from 'react'
 import { useShallow } from 'zustand/shallow'
 import type { Rect } from '@/core/geometry'
 import { unionRects } from '@/core/geometry'
-import { itemBounds, openingBounds, roomBounds } from '@/model/derive'
-import type { Item, Opening, Room, SelectionRef } from '@/model/types'
+import { itemBounds, openingBounds, roomBounds, wallBounds } from '@/model/derive'
+import type { Item, Opening, Room, SelectionRef, Wall } from '@/model/types'
 import { useEditorStore } from './store'
 
 export const usePlan = () => useEditorStore((state) => state.plan)
@@ -27,6 +27,7 @@ export function useSelectedIds(kind: SelectionRef['kind']): string[] {
 export interface ResolvedSelection {
   refs: SelectionRef[]
   rooms: Room[]
+  walls: Wall[]
   items: Item[]
   openings: Opening[]
   bounds: Rect | null
@@ -39,20 +40,23 @@ export function useResolvedSelection(): ResolvedSelection {
 
   return useMemo(() => {
     const roomIds = new Set(selection.filter((r) => r.kind === 'room').map((r) => r.id))
+    const wallIds = new Set(selection.filter((r) => r.kind === 'wall').map((r) => r.id))
     const itemIds = new Set(selection.filter((r) => r.kind === 'item').map((r) => r.id))
     const openingIds = new Set(selection.filter((r) => r.kind === 'opening').map((r) => r.id))
 
     const rooms = plan.rooms.filter((room) => roomIds.has(room.id))
+    const walls = plan.walls.filter((wall) => wallIds.has(wall.id))
     const items = plan.items.filter((item) => itemIds.has(item.id))
     const openings = plan.openings.filter((opening) => openingIds.has(opening.id))
 
     const rects: Rect[] = [
       ...rooms.map(roomBounds),
+      ...walls.map(wallBounds),
       ...items.map(itemBounds),
       ...openings.map((opening) => openingBounds(plan, opening)).filter((r): r is Rect => !!r),
     ]
 
-    return { refs: selection, rooms, items, openings, bounds: unionRects(rects) }
+    return { refs: selection, rooms, walls, items, openings, bounds: unionRects(rects) }
   }, [plan, selection])
 }
 

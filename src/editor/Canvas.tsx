@@ -13,6 +13,7 @@ import { OpeningsLayer } from './layers/OpeningsLayer'
 import { PreviewLayer } from './layers/PreviewLayer'
 import { RoomsLayer } from './layers/RoomsLayer'
 import { SelectionLayer } from './layers/SelectionLayer'
+import { WallsLayer } from './layers/WallsLayer'
 
 export function Canvas() {
   const hostRef = useRef<HTMLDivElement>(null)
@@ -97,6 +98,7 @@ export function Canvas() {
               />
             )}
             <RoomsLayer />
+            <WallsLayer />
             <OpeningsLayer />
             <ItemsLayer />
           </g>
@@ -120,6 +122,7 @@ export function Canvas() {
             plan={plan}
             viewport={viewport}
             rooms={selectedRooms}
+            walls={selection.walls}
             items={selection.items}
             openings={selection.openings}
             selectedVertex={selectedVertex}

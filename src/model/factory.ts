@@ -2,7 +2,7 @@ import { createId } from '@/core/id'
 import type { Rect, Vec2 } from '@/core/geometry'
 import { defaultGridStep } from '@/core/units'
 import { getItemTemplate, getOpeningTemplate, type ItemTemplate } from './catalog'
-import type { Item, Opening, OpeningKind, Plan, Room, Settings } from './types'
+import type { Item, Opening, OpeningKind, Plan, Room, Settings, Wall } from './types'
 
 export const DEFAULT_WALL_THICKNESS = 4
 export const DEFAULT_FLOOR = '#ffffff'
@@ -41,6 +41,10 @@ export function createRoomFromRect(
     wallThickness,
     floor: DEFAULT_FLOOR,
   }
+}
+
+export function createWall(a: Vec2, b: Vec2, thickness = DEFAULT_WALL_THICKNESS): Wall {
+  return { id: createId('wall'), a, b, thickness }
 }
 
 export function createItem(template: ItemTemplate, center: Vec2, rotation = 0): Item {
@@ -89,13 +93,14 @@ export const DEFAULT_SETTINGS: Settings = {
   showGrid: true,
   snapToGrid: true,
   snapToObjects: true,
+  snapRotation: true,
   showDimensions: true,
   showAreas: true,
   showNames: true,
 }
 
 export function createEmptyPlan(name = 'Untitled plan'): Plan {
-  return { version: 1, name, rooms: [], openings: [], items: [] }
+  return { version: 1, name, rooms: [], walls: [], openings: [], items: [] }
 }
 
 /** A small furnished room so a first-time user has something to poke at. */

@@ -279,14 +279,42 @@ const GLYPHS: Record<GlyphKey, Glyph> = {
     </g>
   ),
 
-  fridge: ({ w, h }) => (
-    <g>
-      <line x1={0} y1={-h / 2} x2={0} y2={h / 2} {...DETAIL} />
-      <line x1={-4} y1={h / 2 - 8} x2={-4} y2={h / 2 - 2} {...DETAIL} />
-      <line x1={4} y1={h / 2 - 8} x2={4} y2={h / 2 - 2} {...DETAIL} />
-      <line x1={-w / 2 + 2} y1={-h / 2 + 3} x2={w / 2 - 2} y2={-h / 2 + 3} {...SOFT} />
-    </g>
-  ),
+  fridge: ({ w, h }) => {
+    const inset = 3
+    const gap = 1
+    const doorW = (w - inset * 2 - gap) / 2
+    const doorH = h - inset * 2 - 4
+    const doorY = -h / 2 + inset + 2
+    const leftDoorX = -w / 2 + inset
+    const rightDoorX = gap / 2
+    const handleY1 = doorY + 5
+    const handleY2 = doorY + doorH - 5
+    return (
+      <g>
+        <line x1={-w / 2 + 2} y1={-h / 2 + 4} x2={w / 2 - 2} y2={-h / 2 + 4} {...SOFT} />
+        <rect {...SOFT} x={leftDoorX} y={doorY} width={doorW} height={doorH} rx={1} />
+        <rect {...SOFT} x={rightDoorX} y={doorY} width={doorW} height={doorH} rx={1} />
+        <line x1={-gap / 2 - 2} y1={handleY1} x2={-gap / 2 - 2} y2={handleY2} {...DETAIL} />
+        <line x1={gap / 2 + 2} y1={handleY1} x2={gap / 2 + 2} y2={handleY2} {...DETAIL} />
+        <line x1={-w / 2 + 3} y1={h / 2 - 4} x2={w / 2 - 3} y2={h / 2 - 4} {...SOFT} />
+      </g>
+    )
+  },
+
+  fridgeSingle: ({ w, h }) => {
+    const inset = 3
+    const doorY = -h / 2 + inset + 2
+    const doorH = h - inset * 2 - 4
+    const handleX = w / 2 - inset - 4
+    return (
+      <g>
+        <line x1={-w / 2 + 2} y1={-h / 2 + 4} x2={w / 2 - 2} y2={-h / 2 + 4} {...SOFT} />
+        <rect {...SOFT} x={-w / 2 + inset} y={doorY} width={w - inset * 2} height={doorH} rx={1} />
+        <line x1={handleX} y1={doorY + 5} x2={handleX} y2={doorY + doorH - 5} {...DETAIL} />
+        <line x1={-w / 2 + 3} y1={h / 2 - 4} x2={w / 2 - 3} y2={h / 2 - 4} {...SOFT} />
+      </g>
+    )
+  },
 
   range: ({ w, h }) => {
     const r = Math.min(w, h) * 0.16
@@ -320,6 +348,20 @@ const GLYPHS: Record<GlyphKey, Glyph> = {
       <line x1={w / 2 - 6} y1={-h / 2 + 4} x2={w / 2 - 6} y2={h / 2 - 4} {...SOFT} />
     </g>
   ),
+
+  radiator: ({ w, h }) => {
+    const fins = Math.max(3, Math.round(w / 4))
+    const inset = Math.min(1.5, h * 0.2)
+    return (
+      <g>
+        <rect {...DETAIL} {...box(w, h, inset, 1)} />
+        {Array.from({ length: fins - 1 }, (_, index) => {
+          const x = -w / 2 + ((index + 1) * w) / fins
+          return <line key={index} x1={x} y1={-h / 2 + inset + 1} x2={x} y2={h / 2 - inset - 1} {...SOFT} />
+        })}
+      </g>
+    )
+  },
 
   sink: ({ w, h }) => (
     <g>

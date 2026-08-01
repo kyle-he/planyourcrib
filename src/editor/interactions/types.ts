@@ -17,6 +17,11 @@ export interface SceneHandlers {
   startVertexInsert: (roomId: string, edgeIndex: number, at: Vec2, event: ReactPointerEvent) => void
   removeVertex: (roomId: string, index: number, event: ReactPointerEvent) => void
   startWallDrag: (roomId: string, edgeIndex: number, event: ReactPointerEvent) => void
+  startWallEndpointDrag: (
+    wallId: string,
+    endpoint: 'a' | 'b',
+    event: ReactPointerEvent,
+  ) => void
   startOpeningDrag: (openingId: string, event: ReactPointerEvent) => void
   startOpeningResize: (
     openingId: string,
@@ -31,6 +36,7 @@ export interface SceneHandlers {
 export interface PreviewState {
   marquee: Rect | null
   draftRoom: Rect | null
+  draftWall: { a: Vec2; b: Vec2; thickness: number } | null
   measure: { a: Vec2; b: Vec2 } | null
   /** Ghost for the item placement tool. */
   itemGhost: {
@@ -52,6 +58,7 @@ export interface PreviewState {
 export const EMPTY_PREVIEW: PreviewState = {
   marquee: null,
   draftRoom: null,
+  draftWall: null,
   measure: null,
   itemGhost: null,
   openingGhost: null,

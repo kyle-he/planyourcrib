@@ -20,6 +20,13 @@ const PATHS = {
       <path d="M3.5 15.5h6v4" />
     </>
   ),
+  wall: (
+    <>
+      <path d="M3.5 16.5L19 5" />
+      <path d="M5 19L20.5 7.5" />
+      <path d="M3.5 16.5L5 19M19 5l1.5 2.5" />
+    </>
+  ),
   door: (
     <>
       <path d="M4 20h16" />

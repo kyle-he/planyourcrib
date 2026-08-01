@@ -1,10 +1,10 @@
 import { produce } from 'immer'
 import type { StateCreator } from 'zustand'
-import { add, clamp, dot, normalize, scale, sub } from '@/core/geometry'
+import { add, clamp, dot, midpoint, normalize, rotate, scale, sub } from '@/core/geometry'
 import { createId } from '@/core/id'
 import { maxOpeningOffset, roomEdge } from '@/model/derive'
 import { DEFAULT_WALL_THICKNESS, createStarterPlan, nextRoomName } from '@/model/factory'
-import type { Item, Opening, Plan, Room, SelectionRef } from '@/model/types'
+import type { Item, Opening, Plan, Room, SelectionRef, Wall } from '@/model/types'
 import type { EditorStore, PlanSlice } from './types'
 
 const HISTORY_LIMIT = 100
@@ -77,9 +77,10 @@ export const createPlanSlice: StateCreator<EditorStore, [], [], PlanSlice> = (se
       const state = get()
       const wallThickness = plan.rooms[0]?.wallThickness ??
         state.settings.wallThickness ?? DEFAULT_WALL_THICKNESS
-      const normalizedPlan = {
+      const normalizedPlan: Plan = {
         ...plan,
         rooms: plan.rooms.map((room) => ({ ...room, wallThickness })),
+        walls: (plan.walls ?? []).map((wall) => ({ ...wall, thickness: wall.thickness ?? wallThickness })),
       }
       set({
         plan: normalizedPlan,
@@ -91,7 +92,7 @@ export const createPlanSlice: StateCreator<EditorStore, [], [], PlanSlice> = (se
       })
     },
     newPlan: () => {
-      get().loadPlan({ version: 1, name: 'Untitled plan', rooms: [], openings: [], items: [] })
+      get().loadPlan({ version: 1, name: 'Untitled plan', rooms: [], walls: [], openings: [], items: [] })
     },
     renamePlan: (name) => apply((plan) => void (plan.name = name)),
 
@@ -150,6 +151,13 @@ export const createPlanSlice: StateCreator<EditorStore, [], [], PlanSlice> = (se
         }
       }),
 
+    addWall: (wall) => apply((plan) => void plan.walls.push(wall)),
+    updateWall: (id, patch) =>
+      apply((plan) => {
+        const wall = plan.walls.find((candidate) => candidate.id === id)
+        if (wall) Object.assign(wall, patch)
+      }),
+
     addOpening: (opening) => apply((plan) => void plan.openings.push(opening)),
     updateOpening: (id, patch) =>
       apply((plan) => {
@@ -177,10 +185,12 @@ export const createPlanSlice: StateCreator<EditorStore, [], [], PlanSlice> = (se
     deleteEntities: (refs) => {
       if (refs.length === 0) return
       const rooms = idsOfKind(refs, 'room')
+      const walls = idsOfKind(refs, 'wall')
       const items = idsOfKind(refs, 'item')
       const openings = idsOfKind(refs, 'opening')
       apply((plan) => {
         plan.rooms = plan.rooms.filter((room) => !rooms.has(room.id))
+        plan.walls = plan.walls.filter((wall) => !walls.has(wall.id))
         plan.items = plan.items.filter((item) => !items.has(item.id))
         plan.openings = plan.openings.filter(
           (opening) => !openings.has(opening.id) && !rooms.has(opening.roomId),
@@ -192,6 +202,7 @@ export const createPlanSlice: StateCreator<EditorStore, [], [], PlanSlice> = (se
     translateEntities: (refs, delta) => {
       if (refs.length === 0 || (delta.x === 0 && delta.y === 0)) return
       const rooms = idsOfKind(refs, 'room')
+      const walls = idsOfKind(refs, 'wall')
       const items = idsOfKind(refs, 'item')
       const openings = idsOfKind(refs, 'opening')
       apply((plan) => {
@@ -201,6 +212,11 @@ export const createPlanSlice: StateCreator<EditorStore, [], [], PlanSlice> = (se
             point.x += delta.x
             point.y += delta.y
           }
+        }
+        for (const wall of plan.walls) {
+          if (!walls.has(wall.id)) continue
+          wall.a = { x: wall.a.x + delta.x, y: wall.a.y + delta.y }
+          wall.b = { x: wall.b.x + delta.x, y: wall.b.y + delta.y }
         }
         for (const item of plan.items) {
           if (!items.has(item.id) || item.locked) continue
@@ -222,9 +238,17 @@ export const createPlanSlice: StateCreator<EditorStore, [], [], PlanSlice> = (se
     },
 
     rotateEntities: (refs, degrees) => {
+      const walls = idsOfKind(refs, 'wall')
       const items = idsOfKind(refs, 'item')
-      if (items.size === 0) return
+      if (walls.size + items.size === 0) return
       apply((plan) => {
+        for (const wall of plan.walls) {
+          if (!walls.has(wall.id)) continue
+          const center = midpoint(wall.a, wall.b)
+          const radians = (degrees * Math.PI) / 180
+          wall.a = rotate(wall.a, radians, center)
+          wall.b = rotate(wall.b, radians, center)
+        }
         for (const item of plan.items) {
           if (!items.has(item.id) || item.locked) continue
           item.rotation = (((item.rotation + degrees) % 360) + 360) % 360
@@ -234,6 +258,7 @@ export const createPlanSlice: StateCreator<EditorStore, [], [], PlanSlice> = (se
 
     duplicateEntities: (refs, delta) => {
       const rooms = idsOfKind(refs, 'room')
+      const walls = idsOfKind(refs, 'wall')
       const items = idsOfKind(refs, 'item')
       const created: SelectionRef[] = []
       apply((plan) => {
@@ -250,6 +275,17 @@ export const createPlanSlice: StateCreator<EditorStore, [], [], PlanSlice> = (se
           for (const opening of plan.openings.filter((o) => o.roomId === room.id)) {
             plan.openings.push({ ...opening, id: createId('open'), roomId: copy.id })
           }
+        }
+        for (const wall of [...plan.walls]) {
+          if (!walls.has(wall.id)) continue
+          const copy: Wall = {
+            ...wall,
+            id: createId('wall'),
+            a: { x: wall.a.x + delta.x, y: wall.a.y + delta.y },
+            b: { x: wall.b.x + delta.x, y: wall.b.y + delta.y },
+          }
+          plan.walls.push(copy)
+          created.push({ kind: 'wall', id: copy.id })
         }
         for (const item of [...plan.items]) {
           if (!items.has(item.id)) continue
@@ -275,6 +311,7 @@ function idsOfKind(refs: readonly SelectionRef[], kind: SelectionRef['kind']): S
 function pruneSelection(refs: readonly SelectionRef[], plan: Plan): SelectionRef[] {
   const exists = (ref: SelectionRef) => {
     if (ref.kind === 'room') return plan.rooms.some((room) => room.id === ref.id)
+    if (ref.kind === 'wall') return plan.walls.some((wall) => wall.id === ref.id)
     if (ref.kind === 'item') return plan.items.some((item) => item.id === ref.id)
     return plan.openings.some((opening: Opening) => opening.id === ref.id)
   }

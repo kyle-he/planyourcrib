@@ -4,10 +4,15 @@
  * delta plus the guides to draw.
  */
 import {
+  add,
   closestPointOnSegment,
   distance,
+  distanceToSegment,
+  normalize,
   polygonBounds,
   roundTo,
+  scale,
+  sub,
   type Rect,
   type Vec2,
 } from '@/core/geometry'
@@ -34,6 +39,22 @@ export type SnapGuide = AxisSnapGuide | SegmentSnapGuide
 export interface SnapResult {
   delta: Vec2
   guides: SnapGuide[]
+}
+
+export interface WallSnapSegment {
+  id: string
+  a: Vec2
+  b: Vec2
+  direction: Vec2
+}
+
+export interface WallSegmentSnap extends SnapResult {
+  segment: WallSnapSegment
+}
+
+export interface NearbyWallSegment {
+  segment: WallSnapSegment
+  distance: number
 }
 
 export interface SnapContext {
@@ -195,6 +216,95 @@ export function snapPoint(point: Vec2, context: SnapContext): SnapResult {
   }
 
   return { delta: snapped, guides }
+}
+
+/**
+ * Attach a point to the nearest wall centreline. Freestanding walls and room
+ * walls participate, so dividers can join each other or continue from a room.
+ */
+export function snapPointToWallSegments(
+  point: Vec2,
+  context: SnapContext,
+  tolerancePx = TOLERANCE_PX,
+  respectMovementSnapping = true,
+): WallSegmentSnap | null {
+  if (respectMovementSnapping && !context.settings.snapToObjects) return null
+
+  const tolerance = tolerancePx / context.scale
+  let bestDistance = tolerance
+  let best: { point: Vec2; segment: WallSnapSegment } | null = null
+
+  const consider = (segment: WallSnapSegment) => {
+    const { a, b } = segment
+    const projected = closestPointOnSegment(point, a, b)
+    const gap = distance(point, projected)
+    if (gap >= bestDistance) return
+    bestDistance = gap
+    best = { point: projected, segment }
+  }
+
+  for (const segment of collectWallSnapSegments(context)) consider(segment)
+
+  const result = best as { point: Vec2; segment: WallSnapSegment } | null
+  return result
+    ? {
+        delta: result.point,
+        guides: [{ axis: 'segment', a: result.segment.a, b: result.segment.b }],
+        segment: result.segment,
+      }
+    : null
+}
+
+/** Find the closest wall to a small set of points, using a screen-space range. */
+export function findNearbyWallSegment(
+  points: readonly Vec2[],
+  context: SnapContext,
+  tolerancePx: number,
+  respectMovementSnapping = true,
+): NearbyWallSegment | null {
+  if ((respectMovementSnapping && !context.settings.snapToObjects) || points.length === 0) return null
+  let bestDistance = tolerancePx / context.scale
+  let best: WallSnapSegment | null = null
+
+  for (const segment of collectWallSnapSegments(context)) {
+    for (const point of points) {
+      const gap = distanceToSegment(point, segment.a, segment.b)
+      if (gap >= bestDistance) continue
+      bestDistance = gap
+      best = segment
+    }
+  }
+
+  return best ? { segment: best, distance: bestDistance } : null
+}
+
+function collectWallSnapSegments(context: SnapContext): WallSnapSegment[] {
+  const result: WallSnapSegment[] = []
+  for (const wall of context.plan.walls) {
+    if (context.exclude?.has(wall.id)) continue
+    result.push({
+      id: wall.id,
+      a: wall.a,
+      b: wall.b,
+      direction: normalize(sub(wall.b, wall.a)),
+    })
+  }
+
+  for (const room of context.plan.rooms) {
+    if (context.exclude?.has(room.id)) continue
+    for (const edge of roomEdges(room)) {
+      const offset = scale(edge.normal, room.wallThickness / 2)
+      const a = add(edge.a, offset)
+      const b = add(edge.b, offset)
+      result.push({
+        id: `room:${room.id}:${edge.index}`,
+        a,
+        b,
+        direction: normalize(sub(b, a)),
+      })
+    }
+  }
+  return result
 }
 
 /**

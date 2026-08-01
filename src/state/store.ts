@@ -36,6 +36,10 @@ export const useEditorStore = create<EditorStore>()(
           ? {
               ...persisted.plan,
               rooms: persisted.plan.rooms.map((room) => ({ ...room, wallThickness })),
+              walls: (persisted.plan.walls ?? []).map((wall) => ({
+                ...wall,
+                thickness: wall.thickness ?? wallThickness,
+              })),
             }
           : currentState.plan
         return {
