@@ -862,6 +862,12 @@ body[data-pointer-dragging='true'] .app * {
   box-shadow: var(--shadow-lg);
 }
 
+/* The library overlays the canvas so opening it never pans the plan. Centre
+   the drop prompt within the remaining visible canvas without moving either. */
+.app__center--sidebar-open .canvas-drop-overlay span {
+  transform: translateX(calc(var(--panel-width) / 2));
+}
+
 .room-vertex__target {
   transition:
     fill var(--duration-fast) var(--ease-out),

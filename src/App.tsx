@@ -28,7 +28,7 @@ export function App() {
       <Topbar onShowShortcuts={toggleShortcuts} />
       <div className="app__body">
         {!sidebarCollapsed && <CatalogPanel onCollapse={() => setSidebarCollapsed(true)} />}
-        <div className="app__center">
+        <div className={`app__center${sidebarCollapsed ? '' : ' app__center--sidebar-open'}`}>
           <Canvas />
           <Inspector />
           {sidebarCollapsed && (

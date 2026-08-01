@@ -571,6 +571,44 @@ async function press(key, modifiers = []) {
   check('E rotates 90°', rotated.rotation === 90, String(rotated.rotation))
   await press('q')
   check('Q rotates back', (await plan()).items.find((i) => i.id === sofa.id).rotation === 0)
+
+  const numericCursors = await page.evaluate(() => ({
+    length: getComputedStyle(
+      document.querySelector('.inspector-popover .length-field__part input'),
+    ).cursor,
+    rotation: getComputedStyle(
+      document.querySelector('.inspector-popover .number-field__control input'),
+    ).cursor,
+  }))
+  check(
+    'ordinary number inputs use the text cursor while rotation advertises scrubbing',
+    numericCursors.length === 'text' && numericCursors.rotation === 'ew-resize',
+    JSON.stringify(numericCursors),
+  )
+
+  const rotationField = await page.$eval(
+    '.inspector-popover .number-field__control input',
+    (input) => {
+      const box = input.getBoundingClientRect()
+      return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+    },
+  )
+  await page.mouse.move(rotationField.x, rotationField.y)
+  await page.mouse.down()
+  await page.mouse.move(rotationField.x + 18, rotationField.y, { steps: 6 })
+  await page.mouse.up()
+  await sleep(120)
+  const scrubbedRotation = (await plan()).items.find((item) => item.id === sofa.id).rotation
+  check(
+    'dragging the rotation input adjusts its value',
+    Math.abs(scrubbedRotation - 18) < 1,
+    String(scrubbedRotation),
+  )
+  await press('z', ['Meta'])
+  check(
+    'one undo restores a scrubbed rotation',
+    (await plan()).items.find((item) => item.id === sofa.id).rotation === 0,
+  )
 }
 
 // -------------------------------------------------------------- 5. wall dragging
@@ -1136,10 +1174,26 @@ async function press(key, modifiers = []) {
   const highlighted = await page.$eval('.canvas-host', (host) =>
     host.classList.contains('canvas-host--image-drag'),
   )
+  const dropAlignment = await page.evaluate(() => {
+    const overlay = document.querySelector('.canvas-drop-overlay').getBoundingClientRect()
+    const badge = document.querySelector('.canvas-drop-overlay span').getBoundingClientRect()
+    const library = document.querySelector('.panel--left')?.getBoundingClientRect()
+    const visibleLeft = library?.right ?? overlay.left
+    return {
+      actual: (badge.left + badge.right) / 2,
+      expected: (visibleLeft + overlay.right) / 2,
+      libraryExpanded: Boolean(library),
+    }
+  })
   check(
     'dragging a file over the canvas is accepted and highlighted',
     overAccepted && highlighted,
     JSON.stringify({ overAccepted, highlighted }),
+  )
+  check(
+    'Drop to place is centered in the viewport beside the expanded library',
+    dropAlignment.libraryExpanded && Math.abs(dropAlignment.actual - dropAlignment.expected) < 1,
+    JSON.stringify(dropAlignment),
   )
   await page.evaluate(() => globalThis.__fire('drop'))
 
