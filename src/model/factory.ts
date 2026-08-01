@@ -1,5 +1,6 @@
 import { createId } from '@/core/id'
 import type { Rect, Vec2 } from '@/core/geometry'
+import { defaultGridStep } from '@/core/units'
 import { getItemTemplate, getOpeningTemplate, type ItemTemplate } from './catalog'
 import type { Item, Opening, OpeningKind, Plan, Room, Settings } from './types'
 
@@ -79,7 +80,7 @@ export function createOpening(
 
 export const DEFAULT_SETTINGS: Settings = {
   unit: 'ftin',
-  gridStep: 6,
+  gridStep: defaultGridStep('ftin'),
   showGrid: true,
   snapToGrid: true,
   snapToObjects: true,

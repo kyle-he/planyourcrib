@@ -141,7 +141,7 @@ export function parseLength(raw: string, unit: UnitSystem): number | null {
 
 /** Grid/snap step in inches that feels natural for the active unit system. */
 export function defaultGridStep(unit: UnitSystem): number {
-  return unit === 'cm' || unit === 'm' ? 10 / CM_PER_INCH : 6
+  return unit === 'cm' || unit === 'm' ? 10 / CM_PER_INCH : 1
 }
 
 /** Heavier grid line every foot (imperial) or metre (metric). */
