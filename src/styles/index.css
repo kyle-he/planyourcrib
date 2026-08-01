@@ -1140,6 +1140,16 @@ body[data-pointer-dragging='true'] .app * {
   line-height: 1.4;
 }
 
+@media (max-width: 768px) {
+  .topbar__brand {
+    display: none;
+  }
+
+  .viewport-controls__zoom {
+    display: none;
+  }
+}
+
 .modal {
   width: min(520px, calc(100vw - 40px));
   max-height: calc(100vh - 80px);

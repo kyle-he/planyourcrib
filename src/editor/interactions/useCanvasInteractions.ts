@@ -98,6 +98,9 @@ export interface CanvasInteractions {
   preview: PreviewState
   scene: SceneHandlers
   cursor: string
+  onPointerDownCapture: (event: ReactPointerEvent) => void
+  onPointerMoveCapture: (event: ReactPointerEvent) => void
+  onPointerUpCapture: (event: ReactPointerEvent) => void
   onPointerDown: (event: ReactPointerEvent) => void
   onPointerMove: (event: ReactPointerEvent) => void
   onPointerUp: (event: ReactPointerEvent) => void
@@ -114,6 +117,9 @@ export function useCanvasInteractions(
   const drag = useRef<DragState | null>(null)
   const measureCycle = useRef<MeasureCycle>(null)
   const rect = useRef<DOMRect | null>(null)
+  const touchPoints = useRef(new Map<number, Vec2>())
+  const multiTouchActive = useRef(false)
+  const multiTouchFrame = useRef<{ center: Vec2; distance: number } | null>(null)
   const patchPreview = useCallback(
     (patch: Partial<PreviewState>) => setPreview((current) => ({ ...current, ...patch })),
     [],
@@ -201,6 +207,83 @@ export function useCanvasInteractions(
       if (host?.hasPointerCapture(pointerId)) host.releasePointerCapture(pointerId)
     },
     [hostRef],
+  )
+
+  /**
+   * Touches enter through the host's capture phase so the second finger wins
+   * before a room, item, or resize handle can interpret it as another edit.
+   * One finger retains the normal editor behavior; two fingers pan and pinch.
+   */
+  const onPointerDownCapture = useCallback(
+    (event: ReactPointerEvent) => {
+      if (event.pointerType !== 'touch') return
+      touchPoints.current.set(event.pointerId, localPoint(event))
+      if (touchPoints.current.size < 2) return
+
+      event.preventDefault()
+      event.stopPropagation()
+      const currentDrag = drag.current
+      if (currentDrag && dragUsesHistoryBatch(currentDrag)) {
+        useEditorStore.getState().endBatch()
+      }
+      drag.current = null
+      patchPreview({
+        draftRoom: null,
+        marquee: null,
+        guides: [],
+        sizeHint: null,
+        itemGhost: null,
+        openingGhost: null,
+      })
+      multiTouchActive.current = true
+      multiTouchFrame.current = frameForTouches(touchPoints.current)
+      rect.current = hostRef.current?.getBoundingClientRect() ?? null
+      hostRef.current?.setPointerCapture(event.pointerId)
+    },
+    [hostRef, localPoint, patchPreview],
+  )
+
+  const onPointerMoveCapture = useCallback(
+    (event: ReactPointerEvent) => {
+      if (event.pointerType !== 'touch' || !touchPoints.current.has(event.pointerId)) return
+      touchPoints.current.set(event.pointerId, localPoint(event))
+      if (!multiTouchActive.current) return
+
+      event.preventDefault()
+      event.stopPropagation()
+      const previous = multiTouchFrame.current
+      const next = frameForTouches(touchPoints.current)
+      if (!previous || !next) {
+        multiTouchFrame.current = next
+        return
+      }
+
+      const store = useEditorStore.getState()
+      store.panBy(next.center.x - previous.center.x, next.center.y - previous.center.y)
+      if (previous.distance > 0 && next.distance > 0) {
+        store.zoomAt(next.center, next.distance / previous.distance)
+      }
+      multiTouchFrame.current = next
+    },
+    [localPoint],
+  )
+
+  const onPointerUpCapture = useCallback(
+    (event: ReactPointerEvent) => {
+      if (event.pointerType !== 'touch') return
+      touchPoints.current.delete(event.pointerId)
+      if (!multiTouchActive.current) return
+
+      event.preventDefault()
+      event.stopPropagation()
+      release(event.pointerId)
+      multiTouchFrame.current = frameForTouches(touchPoints.current)
+      if (touchPoints.current.size === 0) {
+        multiTouchActive.current = false
+        multiTouchFrame.current = null
+      }
+    },
+    [release],
   )
 
   // ---------------------------------------------------------------- gestures
@@ -867,6 +950,9 @@ export function useCanvasInteractions(
     preview,
     scene,
     cursor,
+    onPointerDownCapture,
+    onPointerMoveCapture,
+    onPointerUpCapture,
     onPointerDown,
     onPointerMove,
     onPointerUp: finishDrag,
@@ -875,6 +961,19 @@ export function useCanvasInteractions(
 }
 
 // ---------------------------------------------------------------- helpers
+
+function frameForTouches(points: ReadonlyMap<number, Vec2>) {
+  const [a, b] = [...points.values()]
+  if (!a || !b) return null
+  return {
+    center: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+    distance: Math.hypot(b.x - a.x, b.y - a.y),
+  }
+}
+
+function dragUsesHistoryBatch(state: DragState) {
+  return !['pan', 'marquee', 'draw-room', 'measure'].includes(state.kind)
+}
 
 function guidesForSharedWalls(walls: readonly SharedWall[]): SnapGuide[] {
   return walls.map((wall) => ({ axis: 'segment', a: wall.a, b: wall.b }))

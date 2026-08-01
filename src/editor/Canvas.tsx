@@ -63,6 +63,10 @@ export function Canvas() {
         ref={hostRef}
         className={`canvas-host${drop.active ? ' canvas-host--image-drag' : ''}`}
         data-cursor={interactions.cursor}
+        onPointerDownCapture={interactions.onPointerDownCapture}
+        onPointerMoveCapture={interactions.onPointerMoveCapture}
+        onPointerUpCapture={interactions.onPointerUpCapture}
+        onPointerCancelCapture={interactions.onPointerUpCapture}
         onPointerDown={interactions.onPointerDown}
         onPointerMove={interactions.onPointerMove}
         onPointerUp={interactions.onPointerUp}

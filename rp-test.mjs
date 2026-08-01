@@ -1109,7 +1109,7 @@ async function press(key, modifiers = []) {
   })
   check(
     'mobile viewport shows the computer experience notice',
-    notice?.text === 'for the best experience, please use a desktop thx' &&
+    notice?.text === 'for the best experience please use a computer thx' &&
       notice?.button === 'Continue anyway' &&
       notice?.insideViewport &&
       notice?.coversViewport,
@@ -1119,6 +1119,82 @@ async function press(key, modifiers = []) {
   await page.click('.mobile-notice button')
   await sleep(100)
   check('the mobile experience notice can be dismissed', !(await page.$('.mobile-notice')))
+
+  const mobileChrome = await page.evaluate(() => {
+    const brand = document.querySelector('.topbar__brand')
+    const controls = document.querySelector('.canvas-overlay--bottom-right')
+    const visibleButtons = [...controls.querySelectorAll('button')]
+      .filter((button) => button.getBoundingClientRect().width > 0)
+      .map((button) => button.getAttribute('aria-label'))
+    return {
+      brandDisplay: getComputedStyle(brand).display,
+      visibleButtons,
+      zoomInputVisible: document.querySelector('[aria-label="Zoom percentage"]')
+        .getBoundingClientRect().width > 0,
+    }
+  })
+  check(
+    'mobile hides the brand and keeps only the fit viewport control',
+    mobileChrome.brandDisplay === 'none' &&
+      mobileChrome.visibleButtons.join(',') === 'Fit plan (F)' &&
+      !mobileChrome.zoomInputVisible,
+    JSON.stringify(mobileChrome),
+  )
+
+  const beforeTouch = await page.evaluate(() => {
+    const store = globalThis.__roomPlannerStore
+    const current = store.getState()
+    const viewport = { ...current.viewport }
+    store.setState({ viewport: { ...viewport, scale: 2, x: 140, y: 120 } })
+    return { viewport, plan: JSON.stringify(current.plan) }
+  })
+  const touchHost = await page.$eval('.canvas-host', (element) => {
+    const box = element.getBoundingClientRect()
+    return { left: box.left, top: box.top }
+  })
+  const touchClient = await page.target().createCDPSession()
+  const touchPoint = (id, x, y) => ({
+    id,
+    x: touchHost.left + x,
+    y: touchHost.top + y,
+    radiusX: 5,
+    radiusY: 5,
+    force: 1,
+  })
+  await touchClient.send('Input.dispatchTouchEvent', {
+    type: 'touchStart',
+    touchPoints: [touchPoint(1, 24, 220), touchPoint(2, 84, 220)],
+  })
+  await touchClient.send('Input.dispatchTouchEvent', {
+    type: 'touchMove',
+    touchPoints: [touchPoint(1, 14, 250), touchPoint(2, 104, 250)],
+  })
+  await touchClient.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  await sleep(100)
+  await touchClient.detach()
+
+  const afterTouch = await page.evaluate(() => {
+    const current = globalThis.__roomPlannerStore.getState()
+    return { viewport: { ...current.viewport }, plan: JSON.stringify(current.plan) }
+  })
+  const worldBeforeTouch = { x: (54 - 140) / 2, y: (220 - 120) / 2 }
+  const worldAfterTouch = {
+    x: (59 - afterTouch.viewport.x) / afterTouch.viewport.scale,
+    y: (250 - afterTouch.viewport.y) / afterTouch.viewport.scale,
+  }
+  check(
+    'two-finger gestures pan and pinch without editing the plan',
+    Math.abs(afterTouch.viewport.scale - 3) < 0.05 &&
+      Math.hypot(
+        worldAfterTouch.x - worldBeforeTouch.x,
+        worldAfterTouch.y - worldBeforeTouch.y,
+      ) < 0.5 &&
+      afterTouch.plan === beforeTouch.plan,
+    JSON.stringify({ viewport: afterTouch.viewport, worldBeforeTouch, worldAfterTouch }),
+  )
+  await page.evaluate((viewport) => {
+    globalThis.__roomPlannerStore.setState({ viewport })
+  }, beforeTouch.viewport)
 
   await page.setViewport({ width: 1512, height: 950, deviceScaleFactor: 1 })
   await sleep(200)

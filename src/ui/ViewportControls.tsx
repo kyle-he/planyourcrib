@@ -54,9 +54,10 @@ export function ViewportControls() {
           icon="minus"
           label="Zoom out (⌘−)"
           variant="ghost"
+          className="viewport-controls__zoom"
           onClick={() => setZoom(viewport.scale / 1.25)}
         />
-        <label className="zoom-readout">
+        <label className="zoom-readout viewport-controls__zoom">
           <input
             ref={inputRef}
             value={draft ?? String(zoomPercent)}
@@ -73,9 +74,10 @@ export function ViewportControls() {
           icon="plus"
           label="Zoom in (⌘+)"
           variant="ghost"
+          className="viewport-controls__zoom"
           onClick={() => setZoom(viewport.scale * 1.25)}
         />
-        <div className="divider-v" />
+        <div className="divider-v viewport-controls__zoom" />
         <IconButton icon="fit" label="Fit plan (F)" variant="ghost" onClick={fit} />
       </div>
     </div>
