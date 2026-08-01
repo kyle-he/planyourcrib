@@ -159,6 +159,7 @@ async function press(key, modifiers = []) {
   const beforeZoomState = await state()
   const beforeZoom = beforeZoomState.viewport
   const beforeGridStep = beforeZoomState.settings.gridStep
+  const beforeUnit = beforeZoomState.settings.unit
   const centerWorld = (viewport) => ({
     x: (viewport.width / 2 - viewport.x) / viewport.scale,
     y: (viewport.height / 2 - viewport.y) / viewport.scale,
@@ -188,6 +189,7 @@ async function press(key, modifiers = []) {
 
   const readGrid = () => page.evaluate(() => ({
     patterns: [...document.querySelectorAll('.grid-layer pattern')].map((pattern) => ({
+      id: pattern.id,
       width: Number(pattern.getAttribute('width')),
       height: Number(pattern.getAttribute('height')),
     })),
@@ -206,17 +208,33 @@ async function press(key, modifiers = []) {
   check(
     'zoom never adds grid subdivisions beyond the selected step',
     JSON.stringify(zoomedOutGrid) === JSON.stringify(zoomedInGrid) &&
-      zoomedInGrid.patterns.length === 1 &&
+      zoomedInGrid.patterns.length === 2 &&
+      zoomedInGrid.patterns[0].id === 'grid-step' &&
       zoomedInGrid.patterns[0].width === 6 &&
       zoomedInGrid.patterns[0].height === 6 &&
-      zoomedInGrid.fills.join(',') === 'url(#grid-step)',
+      zoomedInGrid.patterns[1].id === 'grid-super' &&
+      zoomedInGrid.patterns[1].width === 72 &&
+      zoomedInGrid.patterns[1].height === 72 &&
+      zoomedInGrid.fills.join(',') === 'url(#grid-step),url(#grid-super)',
     JSON.stringify({ zoomedOutGrid, zoomedInGrid }),
   )
-  await page.evaluate(({ scale, gridStep }) => {
+  await page.evaluate(() =>
+    globalThis.__roomPlannerStore.getState().updateSettings({ unit: 'cm', gridStep: 6 }),
+  )
+  await sleep(100)
+  const metricGrid = await readGrid()
+  check(
+    'superlines use 12 cells for imperial and 10 cells for metric',
+    zoomedInGrid.patterns[1].width === 72 &&
+      metricGrid.patterns[1].width === 60 &&
+      metricGrid.patterns[1].height === 60,
+    JSON.stringify({ imperial: zoomedInGrid.patterns, metric: metricGrid.patterns }),
+  )
+  await page.evaluate(({ scale, gridStep, unit }) => {
     const store = globalThis.__roomPlannerStore.getState()
-    store.updateSettings({ gridStep })
+    store.updateSettings({ unit, gridStep })
     store.setZoom(scale)
-  }, { scale: beforeZoom.scale, gridStep: beforeGridStep })
+  }, { scale: beforeZoom.scale, gridStep: beforeGridStep, unit: beforeUnit })
   await sleep(100)
 }
 

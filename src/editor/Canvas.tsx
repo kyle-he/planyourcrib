@@ -89,6 +89,7 @@ export function Canvas() {
               <GridLayer
                 viewport={viewport}
                 step={settings.gridStep}
+                superlineEvery={unit === 'cm' || unit === 'm' ? 10 : 12}
               />
             )}
             <RoomsLayer />
