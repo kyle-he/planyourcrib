@@ -4,7 +4,7 @@ import { defaultGridStep } from '@/core/units'
 import { getItemTemplate, getOpeningTemplate, type ItemTemplate } from './catalog'
 import type { Item, Opening, OpeningKind, Plan, Room, Settings } from './types'
 
-export const DEFAULT_WALL_THICKNESS = 6
+export const DEFAULT_WALL_THICKNESS = 4
 export const DEFAULT_FLOOR = '#ffffff'
 
 const ROOM_NAMES = [
