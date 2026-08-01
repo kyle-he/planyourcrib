@@ -1111,6 +1111,35 @@ body[data-pointer-dragging='true'] .app * {
   backdrop-filter: blur(2px);
 }
 
+.mobile-notice-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  padding: 20px;
+  background: rgb(22 24 29 / 42%);
+  backdrop-filter: blur(2px);
+  place-items: center;
+}
+
+.mobile-notice {
+  display: grid;
+  gap: 18px;
+  width: min(100%, 340px);
+  padding: 24px;
+  text-align: center;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.mobile-notice__message {
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
 .modal {
   width: min(520px, calc(100vw - 40px));
   max-height: calc(100vh - 80px);

@@ -13,7 +13,9 @@ import { Icon } from '@/ui/components/Icon'
 export function App() {
   const [showShortcuts, setShowShortcuts] = useState(false)
   const shouldAutoCollapseSidebar = useMediaQuery('(max-width: 1024px)')
+  const isMobile = useMediaQuery('(max-width: 768px)')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(shouldAutoCollapseSidebar)
+  const [mobileNoticeDismissed, setMobileNoticeDismissed] = useState(false)
   const toggleShortcuts = useCallback(() => setShowShortcuts((open) => !open), [])
 
   useEffect(() => {
@@ -56,6 +58,27 @@ export function App() {
       </div>
       <StatusBar />
       {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} />}
+      {isMobile && !mobileNoticeDismissed && (
+        <div className="mobile-notice-backdrop" role="presentation">
+          <div
+            className="mobile-notice"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mobile-notice-title"
+          >
+            <div id="mobile-notice-title" className="mobile-notice__message">
+              for the best experience please use a computer thx
+            </div>
+            <button
+              type="button"
+              className="btn btn--primary"
+              onClick={() => setMobileNoticeDismissed(true)}
+            >
+              Continue anyway
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

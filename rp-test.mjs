@@ -1082,6 +1082,48 @@ async function press(key, modifiers = []) {
   )
 }
 
+// -------------------------------------------------------- mobile experience notice
+{
+  await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 })
+  await sleep(250)
+  const notice = await page.evaluate(() => {
+    const dialog = document.querySelector('.mobile-notice')
+    const backdrop = document.querySelector('.mobile-notice-backdrop')
+    if (!dialog || !backdrop) return null
+    const box = dialog.getBoundingClientRect()
+    const backdropBox = backdrop.getBoundingClientRect()
+    return {
+      text: dialog.querySelector('.mobile-notice__message')?.textContent.trim(),
+      button: dialog.querySelector('button')?.textContent.trim(),
+      insideViewport:
+        box.left >= 0 &&
+        box.top >= 0 &&
+        box.right <= window.innerWidth &&
+        box.bottom <= window.innerHeight,
+      coversViewport:
+        backdropBox.left === 0 &&
+        backdropBox.top === 0 &&
+        backdropBox.right === window.innerWidth &&
+        backdropBox.bottom === window.innerHeight,
+    }
+  })
+  check(
+    'mobile viewport shows the computer experience notice',
+    notice?.text === 'for the best experience, please use a desktop thx' &&
+      notice?.button === 'Continue anyway' &&
+      notice?.insideViewport &&
+      notice?.coversViewport,
+    JSON.stringify(notice),
+  )
+
+  await page.click('.mobile-notice button')
+  await sleep(100)
+  check('the mobile experience notice can be dismissed', !(await page.$('.mobile-notice')))
+
+  await page.setViewport({ width: 1512, height: 950, deviceScaleFactor: 1 })
+  await sleep(200)
+}
+
 // ------------------------------------------------------------- 14. no overflow
 {
   for (const width of [1512, 1180, 1024]) {
