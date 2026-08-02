@@ -91,10 +91,14 @@ export function useImageDrop(hostRef: RefObject<HTMLDivElement | null>): ImageDr
 
 /** Import every dropped file, then add the ones that decoded in one commit. */
 async function placeFiles(files: readonly File[], world: Vec2): Promise<void> {
-  const store = useEditorStore.getState()
   const imported = await Promise.all(
     files.map((file) => addImageAsset(file).catch(() => null)),
   )
+
+  // Image decoding and IndexedDB writes are asynchronous. Re-read the editor
+  // after they finish so placement and its undo snapshot use the current plan,
+  // settings and viewport rather than the state from when the drop began.
+  const store = useEditorStore.getState()
 
   const items: Item[] = []
   for (const asset of imported) {

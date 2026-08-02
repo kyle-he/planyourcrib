@@ -13,6 +13,12 @@ import type {
 
 export type ToolId = 'select' | 'room' | 'wall' | 'opening' | 'item' | 'measure'
 
+export interface HistoryEntry {
+  plan: Plan
+  /** Selection belonging to this document state; invalid refs are pruned on restore. */
+  selection: SelectionRef[]
+}
+
 export interface Viewport {
   /** Pixels per inch. */
   scale: number
@@ -26,8 +32,8 @@ export interface Viewport {
 
 export interface PlanSlice {
   plan: Plan
-  past: Plan[]
-  future: Plan[]
+  past: HistoryEntry[]
+  future: HistoryEntry[]
 
   /**
    * Group every change until `endBatch` into a single undo step. The snapshot is

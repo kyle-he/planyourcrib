@@ -5,14 +5,14 @@ import { createId } from '@/core/id'
 import { maxOpeningOffset, roomEdge } from '@/model/derive'
 import { DEFAULT_WALL_THICKNESS, createStarterPlan, nextRoomName } from '@/model/factory'
 import type { Item, Opening, Plan, Room, SelectionRef, Wall } from '@/model/types'
-import type { EditorStore, PlanSlice } from './types'
+import type { EditorStore, HistoryEntry, PlanSlice } from './types'
 
 const HISTORY_LIMIT = 100
 
 /** Snapshot-based history: plan documents are small, so cloning is cheap. */
 export const createPlanSlice: StateCreator<EditorStore, [], [], PlanSlice> = (set, get) => {
   /** Snapshot captured at the start of an open batch, pushed on first change. */
-  let batchSnapshot: Plan | null = null
+  let batchSnapshot: HistoryEntry | null = null
   let batchDepth = 0
 
   function apply(recipe: (plan: Plan) => void) {
@@ -32,7 +32,7 @@ export const createPlanSlice: StateCreator<EditorStore, [], [], PlanSlice> = (se
     }
     set({
       plan: next,
-      past: [...state.past, state.plan].slice(-HISTORY_LIMIT),
+      past: [...state.past, historyEntry(state)].slice(-HISTORY_LIMIT),
       future: [],
     })
   }
@@ -49,7 +49,7 @@ export const createPlanSlice: StateCreator<EditorStore, [], [], PlanSlice> = (se
     future: [],
 
     beginBatch: () => {
-      if (batchDepth === 0) batchSnapshot = get().plan
+      if (batchDepth === 0) batchSnapshot = historyEntry(get())
       batchDepth += 1
     },
     endBatch: () => {
@@ -59,18 +59,26 @@ export const createPlanSlice: StateCreator<EditorStore, [], [], PlanSlice> = (se
     commit: apply,
 
     undo: () => {
-      const { past, plan, future } = get()
+      const { past, plan, future, selection } = get()
       const previous = past.at(-1)
       if (!previous) return
-      set({ plan: previous, past: past.slice(0, -1), future: [plan, ...future] })
-      get().setSelection(pruneSelection(get().selection, previous))
+      set({
+        plan: previous.plan,
+        selection: pruneSelection(previous.selection, previous.plan),
+        past: past.slice(0, -1),
+        future: [historyEntry({ plan, selection }), ...future],
+      })
     },
     redo: () => {
-      const { future, plan, past } = get()
+      const { future, plan, past, selection } = get()
       const next = future[0]
       if (!next) return
-      set({ plan: next, past: [...past, plan], future: future.slice(1) })
-      get().setSelection(pruneSelection(get().selection, next))
+      set({
+        plan: next.plan,
+        selection: pruneSelection(next.selection, next.plan),
+        past: [...past, historyEntry({ plan, selection })],
+        future: future.slice(1),
+      })
     },
 
     loadPlan: (plan) => {
@@ -305,6 +313,10 @@ export const createPlanSlice: StateCreator<EditorStore, [], [], PlanSlice> = (se
 
 function idsOfKind(refs: readonly SelectionRef[], kind: SelectionRef['kind']): Set<string> {
   return new Set(refs.filter((ref) => ref.kind === kind).map((ref) => ref.id))
+}
+
+function historyEntry(state: Pick<EditorStore, 'plan' | 'selection'>): HistoryEntry {
+  return { plan: state.plan, selection: [...state.selection] }
 }
 
 /** Drop selection entries that no longer exist (e.g. after undoing an add). */
