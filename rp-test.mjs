@@ -693,6 +693,40 @@ async function press(key, modifiers = []) {
     'one undo restores a scrubbed rotation',
     (await plan()).items.find((item) => item.id === sofa.id).rotation === 0,
   )
+
+  await page.evaluate((id) => {
+    globalThis.__roomPlannerStore.getState().updateItem(id, { locked: true })
+  }, sofa.id)
+  await sleep(80)
+  const lockedInspector = await page.evaluate(() => ({
+    fields: [...document.querySelectorAll('.inspector-popover input')].map((input) => ({
+      label: input.getAttribute('aria-label'),
+      disabled: input.disabled,
+    })),
+    rotateDisabled: document.querySelector('.item-inspector__rotate')?.disabled,
+  }))
+  check(
+    'locked items keep their top-right parameters editable',
+    lockedInspector.fields.every((field) => !field.disabled) && !lockedInspector.rotateDisabled,
+    JSON.stringify(lockedInspector),
+  )
+
+  await page.click('.item-inspector__rotate')
+  check(
+    'the info panel can rotate a locked item precisely',
+    (await plan()).items.find((item) => item.id === sofa.id).rotation === 90,
+  )
+  const lockedCenter = (await plan()).items.find((item) => item.id === sofa.id).center
+  await drag(lockedCenter, { x: lockedCenter.x + 24, y: lockedCenter.y + 24 })
+  const afterLockedDrag = (await plan()).items.find((item) => item.id === sofa.id).center
+  check(
+    'locking still prevents accidental canvas movement',
+    afterLockedDrag.x === lockedCenter.x && afterLockedDrag.y === lockedCenter.y,
+    JSON.stringify({ before: lockedCenter, after: afterLockedDrag }),
+  )
+  await page.evaluate((id) => {
+    globalThis.__roomPlannerStore.getState().updateItem(id, { locked: false, rotation: 0 })
+  }, sofa.id)
 }
 
 // -------------------------------------------------------------- 5. wall dragging

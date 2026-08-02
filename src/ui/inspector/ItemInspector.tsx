@@ -18,7 +18,6 @@ const ITEM_COLORS = [
 export function ItemInspector({ item }: { item: Item }) {
   const unit = useUnit()
   const updateItem = useEditorStore((state) => state.updateItem)
-  const rotateEntities = useEditorStore((state) => state.rotateEntities)
   const deleteEntities = useEditorStore((state) => state.deleteEntities)
   const beginBatch = useEditorStore((state) => state.beginBatch)
   const endBatch = useEditorStore((state) => state.endBatch)
@@ -43,7 +42,6 @@ export function ItemInspector({ item }: { item: Item }) {
           value={item.width}
           unit={unit}
           min={2}
-          disabled={item.locked}
           onChange={(width) => updateItem(item.id, { width })}
           {...scrub}
         />
@@ -52,7 +50,6 @@ export function ItemInspector({ item }: { item: Item }) {
           value={item.depth}
           unit={unit}
           min={2}
-          disabled={item.locked}
           onChange={(depth) => updateItem(item.id, { depth })}
           {...scrub}
         />
@@ -64,7 +61,6 @@ export function ItemInspector({ item }: { item: Item }) {
           value={item.center.x}
           unit={unit}
           min={-1e6}
-          disabled={item.locked}
           onChange={(x) => updateItem(item.id, { center: { ...item.center, x } })}
           {...scrub}
         />
@@ -73,7 +69,6 @@ export function ItemInspector({ item }: { item: Item }) {
           value={item.center.y}
           unit={unit}
           min={-1e6}
-          disabled={item.locked}
           onChange={(y) => updateItem(item.id, { center: { ...item.center, y } })}
           {...scrub}
         />
@@ -88,7 +83,6 @@ export function ItemInspector({ item }: { item: Item }) {
           scrubbable
           min={-360}
           max={360}
-          disabled={item.locked}
           onChange={(rotation) => updateItem(item.id, { rotation: ((rotation % 360) + 360) % 360 })}
           {...scrub}
         />
@@ -96,8 +90,7 @@ export function ItemInspector({ item }: { item: Item }) {
           icon="rotate"
           className="item-inspector__rotate"
           title="Rotate clockwise by 90° (E)"
-          disabled={item.locked}
-          onClick={() => rotateEntities([ref], 90)}
+          onClick={() => updateItem(item.id, { rotation: (item.rotation + 90) % 360 })}
         >
           Rotate 90°
         </Button>
