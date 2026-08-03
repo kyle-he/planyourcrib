@@ -72,16 +72,23 @@ const PATTERNS = {
     String.raw`^(${NUMBER})\s*(?:'|ft|feet)\s*(?:(${NUMBER})\s*(?:(${NUMBER})\s*/\s*(${NUMBER}))?\s*(?:"|in|inch|inches)?)?$`,
     'i',
   ),
-  // 6 1/2" | 1/2" | 6"
+  // 6 1/2" | 6"
   inches: new RegExp(
-    String.raw`^(?:(${NUMBER})\s+)?(?:(${NUMBER})\s*/\s*(${NUMBER}))?\s*(?:"|in|inch|inches)$`,
+    String.raw`^(${NUMBER})(?:\s+(${NUMBER})\s*/\s*(${NUMBER}))?\s*(?:"|in|inch|inches)$`,
+    'i',
+  ),
+  // 1/2"
+  inchesFraction: new RegExp(
+    String.raw`^(${NUMBER})\s*/\s*(${NUMBER})\s*(?:"|in|inch|inches)$`,
     'i',
   ),
   metric: new RegExp(String.raw`^(${NUMBER})\s*(mm|cm|m)$`, 'i'),
   // Plain imperial entry: `12 6.5` means 12 feet, 6.5 inches.
   feetInchesPlain: new RegExp(String.raw`^(${NUMBER})\s+(${NUMBER})$`),
-  // Bare "6 1/2" or "1/2" or "6.5"
-  bare: new RegExp(String.raw`^(?:(${NUMBER})\s+)?(?:(${NUMBER})\s*/\s*(${NUMBER}))?$`),
+  // Bare "6 1/2" or "6.5"
+  bare: new RegExp(String.raw`^(${NUMBER})(?:\s+(${NUMBER})\s*/\s*(${NUMBER}))?$`),
+  // Bare "1/2"
+  bareFraction: new RegExp(String.raw`^(${NUMBER})\s*/\s*(${NUMBER})$`),
 } as const
 
 function num(value: string | undefined): number {
@@ -96,41 +103,59 @@ function num(value: string | undefined): number {
 export function parseLength(raw: string, unit: UnitSystem): number | null {
   const text = raw.trim().replace(/[\u2032\u2019]/g, "'").replace(/[\u2033\u201D]/g, '"')
   if (!text) return null
+  const sign = text.startsWith('-') ? -1 : 1
+  const unsigned = text.startsWith('-') || text.startsWith('+') ? text.slice(1).trimStart() : text
+  if (!unsigned) return null
 
-  const feetMatch = PATTERNS.feetInches.exec(text)
+  const feetMatch = PATTERNS.feetInches.exec(unsigned)
   if (feetMatch) {
     const [, feet, whole, fracNum, fracDen] = feetMatch
     const fraction = fracDen && Number(fracDen) !== 0 ? num(fracNum) / Number(fracDen) : 0
-    return num(feet) * 12 + num(whole) + fraction
+    return sign * (num(feet) * 12 + num(whole) + fraction)
   }
 
-  const inchMatch = PATTERNS.inches.exec(text)
+  const inchMatch = PATTERNS.inches.exec(unsigned)
   if (inchMatch) {
     const [, whole, fracNum, fracDen] = inchMatch
-    if (whole === undefined && fracNum === undefined) return null
     const fraction = fracDen && Number(fracDen) !== 0 ? num(fracNum) / Number(fracDen) : 0
-    return num(whole) + fraction
+    return sign * (num(whole) + fraction)
   }
 
-  const metricMatch = PATTERNS.metric.exec(text)
+  const inchFractionMatch = PATTERNS.inchesFraction.exec(unsigned)
+  if (inchFractionMatch) {
+    const [, numerator, denominator] = inchFractionMatch
+    if (Number(denominator) === 0) return null
+    return sign * (num(numerator) / num(denominator))
+  }
+
+  const metricMatch = PATTERNS.metric.exec(unsigned)
   if (metricMatch) {
     const value = num(metricMatch[1])
     const suffix = (metricMatch[2] ?? 'cm').toLowerCase()
     const cm = suffix === 'mm' ? value / 10 : suffix === 'm' ? value * 100 : value
-    return cm / CM_PER_INCH
+    return sign * (cm / CM_PER_INCH)
   }
 
-  const plainFeetInches = PATTERNS.feetInchesPlain.exec(text)
+  const plainFeetInches = PATTERNS.feetInchesPlain.exec(unsigned)
   if (plainFeetInches && unit === 'ftin') {
-    return num(plainFeetInches[1]) * 12 + num(plainFeetInches[2])
+    return sign * (num(plainFeetInches[1]) * 12 + num(plainFeetInches[2]))
   }
 
-  const bare = PATTERNS.bare.exec(text)
+  const bare = PATTERNS.bare.exec(unsigned)
   if (bare) {
     const [, whole, fracNum, fracDen] = bare
-    if (whole === undefined && fracNum === undefined) return null
     const fraction = fracDen && Number(fracDen) !== 0 ? num(fracNum) / Number(fracDen) : 0
-    const value = num(whole) + fraction
+    const value = sign * (num(whole) + fraction)
+    if (unit === 'cm') return value / CM_PER_INCH
+    if (unit === 'm') return (value * 100) / CM_PER_INCH
+    return value
+  }
+
+  const bareFraction = PATTERNS.bareFraction.exec(unsigned)
+  if (bareFraction) {
+    const [, numerator, denominator] = bareFraction
+    if (Number(denominator) === 0) return null
+    const value = sign * (num(numerator) / num(denominator))
     if (unit === 'cm') return value / CM_PER_INCH
     if (unit === 'm') return (value * 100) / CM_PER_INCH
     return value

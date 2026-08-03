@@ -40,8 +40,10 @@ export function LengthField({
   const feetRef = useRef<HTMLInputElement>(null)
   const inchesRef = useRef<HTMLInputElement>(null)
   const formatted = formatUnitValue(value, unit)
-  const wholeFeet = Math.floor(Math.max(0, value) / 12)
-  const remainingInches = Math.max(0, value) - wholeFeet * 12
+  const absoluteValue = Math.abs(value)
+  const wholeFeet = Math.floor(absoluteValue / 12)
+  const displayedFeet = `${value < 0 ? '-' : ''}${wholeFeet}`
+  const remainingInches = absoluteValue - wholeFeet * 12
 
   // Drop a stale draft if the value changes underneath us (undo, drag, ...).
   useEffect(() => {
@@ -73,10 +75,12 @@ export function LengthField({
   }
 
   const imperialValue = (): number | null => {
-    const feet = feetDraft === null ? wholeFeet : Number(feetDraft.trim())
+    const feetText = feetDraft === null ? displayedFeet : feetDraft.trim()
+    const feet = Number(feetText)
     const inches = inchesDraft === null ? remainingInches : Number(inchesDraft.trim())
-    if (!Number.isFinite(feet) || !Number.isFinite(inches) || feet < 0 || inches < 0) return null
-    return feet * 12 + inches
+    if (!Number.isFinite(feet) || !Number.isFinite(inches) || inches < 0) return null
+    const magnitude = Math.abs(feet) * 12 + inches
+    return feetText.startsWith('-') ? -magnitude : magnitude
   }
 
   const commitImperial = (): boolean => {
@@ -185,7 +189,7 @@ export function LengthField({
             <input
               ref={feetRef}
               className="input input--numeric"
-              value={feetDraft ?? String(wholeFeet)}
+              value={feetDraft ?? displayedFeet}
               disabled={disabled}
               inputMode="decimal"
               aria-label={`${label ?? 'Length'} in feet`}

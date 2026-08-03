@@ -988,11 +988,12 @@ async function press(key, modifiers = []) {
 
 // --------------------------------------------------------------- 12. unit switch
 {
-  await page.evaluate(() => {
+  const unitItem = await page.evaluate(() => {
     const store = globalThis.__roomPlannerStore.getState()
     const item = store.plan.items[0]
     store.select({ kind: 'item', id: item.id })
     store.updateSettings({ unit: 'cm' })
+    return { id: item.id, center: item.center }
   })
   await sleep(200)
   const fixedMetricUnits = await page.evaluate(() => {
@@ -1047,6 +1048,50 @@ async function press(key, modifiers = []) {
       ),
     JSON.stringify(imperialControls),
   )
+
+  const coordinateCases = [
+    { unit: 'in', entered: '-18.5', expected: -18.5 },
+    { unit: 'cm', entered: '-25.4', expected: -10 },
+    { unit: 'm', entered: '-1', expected: -100 / 2.54 },
+  ]
+  for (const coordinateCase of coordinateCases) {
+    await page.evaluate((unit) => {
+      globalThis.__roomPlannerStore.getState().updateSettings({ unit })
+    }, coordinateCase.unit)
+    await sleep(50)
+    const coordinateField = await page.$('.inspector-popover input[aria-label="X"]')
+    await coordinateField.click({ clickCount: 3 })
+    await page.keyboard.type(coordinateCase.entered)
+    await page.keyboard.press('Enter')
+    const coordinate = (await plan()).items.find((item) => item.id === unitItem.id).center.x
+    check(
+      `negative item coordinates are editable in ${coordinateCase.unit}`,
+      Math.abs(coordinate - coordinateCase.expected) < 0.001,
+      `${coordinateCase.entered} -> ${coordinate}`,
+    )
+  }
+
+  await page.evaluate(() => {
+    globalThis.__roomPlannerStore.getState().updateSettings({ unit: 'ftin' })
+  })
+  await sleep(50)
+  const xFeet = await page.$('.inspector-popover input[aria-label="X in feet"]')
+  const xInches = await page.$('.inspector-popover input[aria-label="X in inches"]')
+  await xFeet.click({ clickCount: 3 })
+  await page.keyboard.type('-1')
+  await xInches.click({ clickCount: 3 })
+  await page.keyboard.type('6')
+  await page.keyboard.press('Enter')
+  const imperialCoordinate = (await plan()).items.find((item) => item.id === unitItem.id).center.x
+  check(
+    'negative item coordinates are editable in feet and inches',
+    Math.abs(imperialCoordinate - -18) < 0.001,
+    `-1 ft 6 in -> ${imperialCoordinate}`,
+  )
+  await page.evaluate(({ id, center }) => {
+    const store = globalThis.__roomPlannerStore.getState()
+    store.updateItem(id, { center })
+  }, unitItem)
 }
 
 // ------------------------------------------------- 13. dragging openings around
