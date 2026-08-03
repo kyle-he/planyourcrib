@@ -1,13 +1,16 @@
+import { useState } from 'react'
 import type { Room } from '@/model/types'
 import { usePlan, useResolvedSelection, useSettings } from '@/state/selectors'
 import { useEditorStore } from '@/state/store'
 import { Button } from '../components/Button'
+import { Icon } from '../components/Icon'
 import { ItemInspector } from './ItemInspector'
 import { OpeningInspector } from './OpeningInspector'
 import { RoomInspector } from './RoomInspector'
 import { WallInspector } from './WallInspector'
 
 export function Inspector() {
+  const [collapsed, setCollapsed] = useState(false)
   const plan = usePlan()
   const { rooms, walls, items, openings } = useResolvedSelection()
   const selectedVertex = useEditorStore((state) => state.selectedVertex)
@@ -17,8 +20,39 @@ export function Inspector() {
   const total = rooms.length + walls.length + items.length + openings.length
   if (total === 0 && !vertexRoom) return null
 
+  if (collapsed) {
+    return (
+      <button
+        type="button"
+        className="inspector-toggle"
+        aria-expanded="false"
+        aria-controls="selection-details"
+        title="Show selection details"
+        onClick={() => setCollapsed(false)}
+      >
+        <Icon name="info" size={15} />
+        <span>Show details</span>
+      </button>
+    )
+  }
+
   return (
-    <aside className="panel inspector-popover" aria-label="Selection details">
+    <aside
+      id="selection-details"
+      className="panel inspector-popover"
+      aria-label="Selection details"
+    >
+      <button
+        type="button"
+        className="panel__collapse inspector-popover__collapse"
+        aria-label="Hide selection details"
+        title="Hide selection details"
+        aria-expanded="true"
+        aria-controls="selection-details"
+        onClick={() => setCollapsed(true)}
+      >
+        <Icon name="chevronRight" size={15} />
+      </button>
       <div className="panel__scroll">
         <div className="section">
           {vertexRoom && selectedVertex && <VertexInspector room={vertexRoom} index={selectedVertex.index} />}

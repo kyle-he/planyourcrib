@@ -33,7 +33,7 @@ export function RoomInspector({ room }: { room: Room }) {
 
   return (
     <div className="stack">
-      <Field label="Name">
+      <Field label="Name" className="inspector-name-field">
         <input
           className="input"
           value={room.name}

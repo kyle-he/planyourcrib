@@ -1,8 +1,16 @@
 import type { ReactNode } from 'react'
 
-export function Field({ label, children }: { label?: string; children: ReactNode }) {
+export function Field({
+  label,
+  children,
+  className,
+}: {
+  label?: string
+  children: ReactNode
+  className?: string
+}) {
   return (
-    <label className="field">
+    <label className={`field${className ? ` ${className}` : ''}`}>
       {label && <span className="field__label">{label}</span>}
       {children}
     </label>

@@ -10,9 +10,6 @@ import { NumberField } from '../components/NumberField'
 const ITEM_COLORS = [
   ...CATEGORIES.map((category) => category.tint),
   '#dfe3ea',
-  '#e6dfd3',
-  '#d9e4dd',
-  '#f0e2e2',
 ]
 
 export function ItemInspector({ item }: { item: Item }) {
@@ -27,7 +24,7 @@ export function ItemInspector({ item }: { item: Item }) {
 
   return (
     <div className="stack">
-      <Field label="Name">
+      <Field label="Name" className="inspector-name-field">
         <input
           className="input"
           value={item.name}

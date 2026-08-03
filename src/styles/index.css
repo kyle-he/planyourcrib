@@ -330,6 +330,48 @@ body[data-pointer-dragging='true'] .app * {
   box-shadow: var(--shadow-lg);
 }
 
+.inspector-popover__collapse {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  margin-left: 0;
+}
+
+/* Keep the first control clear of the floating hide button. */
+.inspector-popover .section > .stack > :first-child {
+  margin-right: 32px;
+}
+
+.inspector-popover .inspector-name-field {
+  width: 75%;
+  margin-right: 0;
+}
+
+.inspector-toggle {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 20;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  height: 32px;
+  padding: 0 10px 0 8px;
+  color: var(--text-secondary);
+  font-weight: 620;
+  background: rgb(255 255 255 / 92%);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+
+.inspector-toggle:hover {
+  color: var(--text-primary);
+  background: var(--surface-panel);
+}
+
 .inspector-popover .panel__scroll {
   padding-bottom: 8px;
 }
